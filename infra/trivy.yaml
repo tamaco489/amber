@@ -1,0 +1,6 @@
+# 指摘が 1 件でもあれば失敗させる
+# 対象は HIGH と CRITICAL だけにする (MEDIUM 以下は、検証環境として許容するものが多いため)
+exit-code: 1
+severity:
+  - HIGH
+  - CRITICAL

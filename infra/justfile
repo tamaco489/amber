@@ -37,6 +37,21 @@ fmt-check:
 validate env="prd": (init env)
     terraform -chdir=envs/{{ env }} validate
 
+# tflint のプラグインを取得する
+lint-init:
+    tflint --init --config {{ source_directory() }}/.tflint.hcl
+
+# tflint で検査する
+lint: lint-init
+    tflint --recursive --config {{ source_directory() }}/.tflint.hcl
+
+# trivy で設定の脆弱性を検査する (その環境の tfvars だけを渡す)
+scan env="prd":
+    trivy config --config trivy.yaml --tf-vars envs/{{ env }}/terraform.tfvars envs/{{ env }}
+
+# PR を出す前の静的検査をまとめて実行する
+check env="prd": fmt-check lint (validate env) (scan env)
+
 
 # ==========================================================================================
 # terraform: provider の依存ロック
