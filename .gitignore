@@ -14,3 +14,6 @@ tmp/
 *.tfplan
 crash.log
 crash.*.log
+
+# Python のバイトコード (フックの実行や構文の検査で作られる)
+__pycache__/
