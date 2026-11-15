@@ -27,3 +27,19 @@ variable "enable_interface_endpoints" {
   description = "Whether to create the interface VPC endpoints. Set to false to cut the cost while the environment is idle."
   type        = bool
 }
+
+variable "github_repository" {
+  description = "GitHub repository allowed to assume the CI roles, in the form of owner/name."
+  type        = string
+}
+
+# backend.tf の bucket と key は変数を使えないため、同じ値をここでも渡す
+variable "tfstate_bucket" {
+  description = "Name of the S3 bucket that stores the Terraform state. Must match backend.tf."
+  type        = string
+}
+
+variable "tfstate_key" {
+  description = "Object key of the Terraform state in the bucket. Must match backend.tf."
+  type        = string
+}
