@@ -1,5 +1,7 @@
-# バケットは Terraform の外で AWS CLI を使って作っている
-# 認証はプロファイルを書かず、手元は AWS_PROFILE、CI は OIDC の一時クレデンシャルで渡す
+# state を置くバケットは、その state 自身では管理できないため Terraform の対象外とし、AWS CLI で事前に作成している
+# 認証情報は backend に書かず、実行する環境ごとに外から渡す
+#   - 手元: 環境変数 AWS_PROFILE
+#   - CI: GitHub Actions の OIDC で得た一時クレデンシャル
 terraform {
   backend "s3" {
     bucket       = "prd-amber-tfstate"

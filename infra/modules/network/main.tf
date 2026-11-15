@@ -14,7 +14,7 @@ data "aws_availability_zones" "available" {
 
 data "aws_region" "current" {}
 
-# インターフェース型の VPC エンドポイントでプライベート DNS を使うため、DNS の 2 つの属性を有効にする
+# インターフェース型エンドポイントのプライベート DNS には、DNS の 2 つの属性が両方とも要る
 resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
   enable_dns_support   = true
@@ -25,7 +25,8 @@ resource "aws_vpc" "main" {
   }
 }
 
-# 既定のセキュリティグループは使わないため、ルールを空にして誤って使っても通信できないようにする
+# 既定のセキュリティグループは使わない
+# ルールを空にして、誤って付けても通信できないようにする
 resource "aws_default_security_group" "main" {
   vpc_id = aws_vpc.main.id
 
@@ -42,7 +43,8 @@ resource "aws_internet_gateway" "main" {
   }
 }
 
-# ALB だけを置く。パブリック IP の自動付与は不要なため有効にしない
+# ALB だけを置く
+# ALB は自分でパブリック IP を持つため、自動付与 (map_public_ip_on_launch) は有効にしない
 resource "aws_subnet" "public" {
   for_each = { for i, az in local.azs : az => i }
 
@@ -88,7 +90,8 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
-# NAT を置かないため、インターネットへの経路を持たない。外への通信は VPC エンドポイントだけにする
+# NAT を置かないため、インターネットへの経路は持たない
+# 外への通信は VPC エンドポイント経由だけになる
 resource "aws_route_table" "private" {
   vpc_id = aws_vpc.main.id
 
