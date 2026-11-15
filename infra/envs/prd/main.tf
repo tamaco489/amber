@@ -14,3 +14,10 @@ module "github_oidc" {
   tfstate_bucket         = var.tfstate_bucket
   tfstate_key            = var.tfstate_key
 }
+
+module "ecr_api" {
+  source = "../../modules/ecr"
+
+  env  = var.env
+  name = "api"
+}
