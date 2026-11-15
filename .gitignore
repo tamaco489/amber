@@ -6,3 +6,11 @@
 
 # 作業用の一時ファイル
 tmp/
+
+# Terraform (state は S3 に置く。.terraform.lock.hcl はコミットする)
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
