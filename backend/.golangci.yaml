@@ -1,0 +1,16 @@
+version: "2"
+
+linters:
+  # standard (errcheck、govet、ineffassign、staticcheck、unused) に加えて有効にする
+  enable:
+    - bodyclose
+    - errorlint
+    - gosec
+    - misspell
+    - noctx
+    - revive
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
