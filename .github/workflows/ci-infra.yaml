@@ -1,0 +1,151 @@
+name: ci-infra
+
+on:
+  pull_request:
+    paths:
+      - "infra/**"
+      - ".tool-versions"
+      - ".github/workflows/ci-infra.yaml"
+      - ".github/workflows/scripts/comment-plan.js"
+
+permissions:
+  contents: read
+
+# 同じ PR への連続 push で、古い実行を打ち切る
+concurrency:
+  group: ci-infra-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  ENV_NAME: prd
+
+defaults:
+  run:
+    working-directory: infra
+
+jobs:
+  # ============================================================
+  # format check
+  # ============================================================
+  # infra/ 配下のすべての .tf と .tfvars が、terraform fmt の整形どおりに書かれているかを確かめる
+  # インデントや = の位置がずれているファイルが 1 つでもあると、差分を出して失敗する
+  # 手元では just infra::fmt で直せる
+  infra-fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # setup-terraform はバージョンをファイルから読めないため、.tool-versions から取り出す
+      - name: Read Terraform version
+        id: versions
+        working-directory: .
+        run: echo "terraform=$(awk '$1 == "terraform" {print $2}' .tool-versions)" >> "$GITHUB_OUTPUT"
+
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ steps.versions.outputs.terraform }}
+          terraform_wrapper: false
+      - name: Check formatting
+        run: terraform fmt -recursive -check -diff
+
+  # ============================================================
+  # lint check
+  # ============================================================
+  # tflint で、Terraform の書き方と AWS のリソースの設定に誤りがないかを確かめる
+  # 使っていない変数、型や description の書き忘れ、存在しないインスタンスタイプなどの指摘があると失敗する
+  # ルールは infra/.tflint.hcl (Terraform の推奨ルールと AWS のルールセット)
+  infra-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: terraform-linters/setup-tflint@v6
+        with:
+          tflint_version_file: .tool-versions
+      # プラグインの取得で GitHub API の回数制限に当たらないよう、トークンを渡す
+      - name: Init TFLint
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: tflint --init --config "$GITHUB_WORKSPACE/infra/.tflint.hcl"
+      - name: Lint
+        run: tflint --recursive --config "$GITHUB_WORKSPACE/infra/.tflint.hcl"
+
+  # ============================================================
+  # scan check
+  # ============================================================
+  # trivy で、AWS のリソースの設定にセキュリティ上の問題がないかを確かめる
+  # 重要度が HIGH か CRITICAL の指摘が 1 件でもあると失敗する (MEDIUM 以下は失敗にしない)
+  # 例: セキュリティグループで全開放している、暗号化を有効にしていない
+  infra-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # setup-trivy はバージョンをファイルから読めないため、.tool-versions から取り出す
+      - name: Read Trivy version
+        id: versions
+        working-directory: .
+        run: echo "trivy=v$(awk '$1 == "trivy" {print $2}' .tool-versions)" >> "$GITHUB_OUTPUT"
+
+      # メジャータグがないため、パッチバージョンまで固定する
+      - uses: aquasecurity/setup-trivy@v0.3.1
+        with:
+          version: ${{ steps.versions.outputs.trivy }}
+      - name: Scan
+        run: trivy config --config trivy.yaml --tf-vars "envs/$ENV_NAME/terraform.tfvars" "envs/$ENV_NAME"
+
+  # ============================================================
+  # plan check
+  # ============================================================
+  # OIDC で読み取り専用のロールを引き受け、AWS の今の状態に対して terraform plan を実行する
+  # init (lock のチェックサム不足を含む)、validate、plan のどれかでエラーになると失敗する
+  # 差分があるだけでは失敗にせず、plan の結果を PR にコメントする
+  infra-plan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # OIDC のトークンを発行して、plan 用のロールを引き受けるため
+      id-token: write
+      # plan の結果を PR にコメントするため
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Read Terraform version
+        id: versions
+        working-directory: .
+        run: echo "terraform=$(awk '$1 == "terraform" {print $2}' .tool-versions)" >> "$GITHUB_OUTPUT"
+
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ steps.versions.outputs.terraform }}
+          terraform_wrapper: false
+
+      # ロールの ARN はリポジトリの Variables (AWS_PLAN_ROLE_ARN) に置く
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_PLAN_ROLE_ARN }}
+          aws-region: ap-northeast-1
+      # lock に linux のチェックサムがなければ、書き換えずに落とす
+      - name: Init
+        run: terraform -chdir="envs/$ENV_NAME" init -input=false -lockfile=readonly
+      - name: Validate
+        run: terraform -chdir="envs/$ENV_NAME" validate
+      # plan が失敗しても結果をコメントできるよう、終了コードを残して次に進む
+      - name: Plan
+        id: plan
+        continue-on-error: true
+        run: |
+          set +e
+          terraform -chdir="envs/$ENV_NAME" plan -input=false -no-color -lock-timeout=60s > "$RUNNER_TEMP/plan.txt" 2>&1
+          echo "exitcode=$?" >> "$GITHUB_OUTPUT"
+      # 同じ PR へのコメントは 1 つにまとめ、push のたびに書き換える
+      - name: Comment plan on PR
+        uses: actions/github-script@v9
+        env:
+          PLAN_FILE: ${{ runner.temp }}/plan.txt
+          PLAN_EXITCODE: ${{ steps.plan.outputs.exitcode }}
+        with:
+          script: |
+            const run = require(`${process.env.GITHUB_WORKSPACE}/.github/workflows/scripts/comment-plan.js`);
+            await run({ github, context });
+      - name: Fail if plan failed
+        if: steps.plan.outputs.exitcode != '0'
+        run: exit 1
