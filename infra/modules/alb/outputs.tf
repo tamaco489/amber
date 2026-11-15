@@ -3,6 +3,11 @@ output "dns_name" {
   value       = aws_lb.this.dns_name
 }
 
+output "arn_suffix" {
+  description = "ARN suffix of the ALB, used as the LoadBalancer dimension of its CloudWatch metrics."
+  value       = aws_lb.this.arn_suffix
+}
+
 output "zone_id" {
   description = "Hosted zone ID of the ALB, used for alias records."
   value       = aws_lb.this.zone_id

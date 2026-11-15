@@ -33,3 +33,9 @@ build version="dev":
 # ECS と同じ条件 (ルートファイルシステムは読み取り専用) で、手元でコンテナを動かす
 run version="dev":
     docker run --rm --read-only -p 8080:8080 --name {{ image }} {{ image }}:{{ version }}
+
+# linux/arm64 でビルドし、ECR に push する (例: just backend::push v1)
+#   - 処理は scripts/push.sh にある
+[doc("ビルドして ECR に push し、ダイジェストを表示する")]
+push version env="prd": (build version)
+    scripts/push.sh {{ image }} {{ version }} {{ env }}

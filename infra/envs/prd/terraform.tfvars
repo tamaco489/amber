@@ -6,14 +6,14 @@ github_oidc_sub_prefix = "repo:tamaco489@189016912/amber@1457865823"
 tfstate_bucket         = "prd-amber-tfstate"
 tfstate_key            = "envs/prd/terraform.tfstate"
 
-# ECS のタスクができるまでは使わないため、false にして費用を止めておく
-# タスクを動かす前に true に戻して apply する
-enable_interface_endpoints = false
-
 # ホストゾーンは tamaco-blog が管理しているものを使い、サブドメインだけをこちらで作る
 zone_name   = "tamaco-blog.jp"
 domain_name = "ecs-lab.tamaco-blog.jp"
 
-# ALB は時間課金のため、使わない間は false にして、DNS のレコードと証明書ごと消しておく
-# ECS のタスクを動かす前に true に戻して apply する
-enable_alb = false
+# 時間課金のリソース (ALB と DNS、インターフェース型エンドポイント、ECS) を、まとめて作るか消すかを切り替える
+# 検証するときだけ true にして apply し、終わったら false に戻して apply する
+enable_runtime = false
+
+# 最初のタスク定義で使う api のイメージ (just backend::push で表示されるダイジェスト)
+# 以降のリビジョンは CD が登録する
+api_image_digest = "sha256:92a522d3b4ce41b739ef397da5e5adbca76a331972f768221a96ab6684837464"

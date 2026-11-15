@@ -23,11 +23,6 @@ variable "vpc_cidr" {
   }
 }
 
-variable "enable_interface_endpoints" {
-  description = "Whether to create the interface VPC endpoints. Set to false to cut the cost while the environment is idle."
-  type        = bool
-}
-
 # GitHub の OIDC トークンの sub の前半 (このリポジトリは、ID を含む immutable subject の形式)
 # 値は gh api repos/<owner>/<repo>/actions/oidc/customization/sub の sub_claim_prefix で確かめられる
 variable "github_oidc_sub_prefix" {
@@ -46,9 +41,20 @@ variable "tfstate_key" {
   type        = string
 }
 
-variable "enable_alb" {
-  description = "Whether to create the ALB and its DNS record and certificate. Set to false to cut the cost while the environment is idle."
+# 時間課金のリソース (ALB と DNS、インターフェース型エンドポイント、ECS) をまとめて作るかどうか
+variable "enable_runtime" {
+  description = "Whether to create the billed runtime resources: the ALB with its DNS record and certificate, the interface VPC endpoints, and the ECS cluster and service. Set to false while the environment is idle."
   type        = bool
+}
+
+variable "api_image_digest" {
+  description = "Digest (sha256:...) of the api image in ECR used by the first task definition. Later revisions are registered by the CD workflow."
+  type        = string
+
+  validation {
+    condition     = can(regex("^sha256:[0-9a-f]{64}$", var.api_image_digest))
+    error_message = "api_image_digest must be in the form sha256:<64 hex characters>."
+  }
 }
 
 variable "zone_name" {
