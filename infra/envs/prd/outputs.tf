@@ -22,3 +22,8 @@ output "api_repository_url" {
   description = "URL of the ECR repository for the api image."
   value       = module.ecr_api.repository_url
 }
+
+output "app_url" {
+  description = "URL of the application. Null while enable_alb is false."
+  value       = var.enable_alb ? "https://${module.dns[0].fqdn}" : null
+}
