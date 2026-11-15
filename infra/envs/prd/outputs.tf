@@ -24,6 +24,16 @@ output "api_repository_url" {
 }
 
 output "app_url" {
-  description = "URL of the application. Null while enable_alb is false."
-  value       = var.enable_alb ? "https://${module.dns[0].fqdn}" : null
+  description = "URL of the application. Null while enable_runtime is false."
+  value       = var.enable_runtime ? "https://${module.dns[0].fqdn}" : null
+}
+
+output "ecs_cluster_name" {
+  description = "Name of the ECS cluster. Null while enable_runtime is false."
+  value       = var.enable_runtime ? module.ecs[0].cluster_name : null
+}
+
+output "ecs_service_name" {
+  description = "Name of the ECS service. Null while enable_runtime is false."
+  value       = var.enable_runtime ? module.ecs[0].service_name : null
 }
