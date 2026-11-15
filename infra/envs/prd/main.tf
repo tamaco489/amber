@@ -9,8 +9,8 @@ module "network" {
 module "github_oidc" {
   source = "../../modules/github_oidc"
 
-  env               = var.env
-  github_repository = var.github_repository
-  tfstate_bucket    = var.tfstate_bucket
-  tfstate_key       = var.tfstate_key
+  env                    = var.env
+  github_oidc_sub_prefix = var.github_oidc_sub_prefix
+  tfstate_bucket         = var.tfstate_bucket
+  tfstate_key            = var.tfstate_key
 }

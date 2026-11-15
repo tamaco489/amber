@@ -3,9 +3,14 @@ variable "env" {
   type        = string
 }
 
-variable "github_repository" {
-  description = "GitHub repository allowed to assume the roles, in the form of owner/name."
+variable "github_oidc_sub_prefix" {
+  description = "Prefix of the sub claim in GitHub OIDC tokens issued for the repository (e.g. repo:<owner>@<owner_id>/<repo>@<repo_id> when immutable subjects are enabled)."
   type        = string
+
+  validation {
+    condition     = startswith(var.github_oidc_sub_prefix, "repo:")
+    error_message = "github_oidc_sub_prefix must start with repo:."
+  }
 }
 
 variable "tfstate_bucket" {

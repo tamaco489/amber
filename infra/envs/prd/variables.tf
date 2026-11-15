@@ -28,8 +28,10 @@ variable "enable_interface_endpoints" {
   type        = bool
 }
 
-variable "github_repository" {
-  description = "GitHub repository allowed to assume the CI roles, in the form of owner/name."
+# GitHub の OIDC トークンの sub の前半 (このリポジトリは、ID を含む immutable subject の形式)
+# 値は gh api repos/<owner>/<repo>/actions/oidc/customization/sub の sub_claim_prefix で確かめられる
+variable "github_oidc_sub_prefix" {
+  description = "Prefix of the sub claim in GitHub OIDC tokens issued for this repository."
   type        = string
 }
 

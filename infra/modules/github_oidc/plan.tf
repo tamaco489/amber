@@ -4,6 +4,8 @@
 
 # PR の ci-infra で terraform plan を実行するロール
 #   - 信頼条件: このリポジトリの pull_request イベントから発行されたトークンだけ
+#   - sub はリポジトリとアカウントの ID を含む形式 (immutable subject) で照合する
+#   - ID は名前を変えても変わらないため、同じ名前で作り直された別のリポジトリからは引き受けられない
 #   - フォークからの PR には OIDC のトークンが発行されないため、外部の PR からは引き受けられない
 #   - 権限: 読み取り専用 (plan は AWS の現状を読むだけで、変更しない)
 resource "aws_iam_role" "plan" {
@@ -29,7 +31,7 @@ data "aws_iam_policy_document" "plan_trust" {
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_repository}:pull_request"]
+      values   = ["${var.github_oidc_sub_prefix}:pull_request"]
     }
   }
 }
