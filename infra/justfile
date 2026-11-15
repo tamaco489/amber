@@ -62,3 +62,49 @@ check env="prd": fmt-check lint (validate env) (scan env)
 [doc("手元と CI の両方のチェックサムを lock に追記する")]
 lock env="prd":
     terraform -chdir=envs/{{ env }} providers lock -platform=linux_amd64 -platform=darwin_arm64
+
+
+# ==========================================================================================
+# テスト用リスナー (8443 番) の接続元
+# ==========================================================================================
+# 今のグローバル IP を、テスト用リスナーへの接続を許可するプレフィックスリストに反映する
+#   - リストは Terraform の外で管理する (公開リポジトリに IP を書かないため。destroy しても残る)
+#   - リストがなければ作り、あれば label の IP を今のものに置き換える (同じ IP なら何もしない)
+#   - IP が変わったときに実行する。セキュリティグループはリストを参照しているため、apply は要らない
+[doc("今のグローバル IP を 8443 番の許可リストに反映する")]
+allow-my-ip env="prd" label="home":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    name="{{ env }}-amber-test-listener-allowed"
+    cidr="$(curl -fsS https://checkip.amazonaws.com | tr -d '[:space:]')/32"
+
+    id=$(aws ec2 describe-managed-prefix-lists --filters "Name=prefix-list-name,Values=${name}" \
+        --query 'PrefixLists[0].PrefixListId' --output text)
+
+    if [ "${id}" = "None" ]; then
+        aws ec2 create-managed-prefix-list --prefix-list-name "${name}" \
+            --address-family IPv4 --max-entries 3 \
+            --entries "Cidr=${cidr},Description={{ label }}" \
+            --tag-specifications "ResourceType=prefix-list,Tags=[{Key=project,Value=amber},{Key=environment,Value={{ env }}},{Key=managed_by,Value=cli}]" \
+            --query 'PrefixList.PrefixListId' --output text
+        echo "created ${name} with ${cidr} ({{ label }})"
+        exit 0
+    fi
+
+    current=$(aws ec2 get-managed-prefix-list-entries --prefix-list-id "${id}" \
+        --query "Entries[?Description=='{{ label }}'].Cidr | [0]" --output text)
+    if [ "${current}" = "${cidr}" ]; then
+        echo "${name} already allows ${cidr} ({{ label }})"
+        exit 0
+    fi
+
+    version=$(aws ec2 describe-managed-prefix-lists --prefix-list-ids "${id}" \
+        --query 'PrefixLists[0].Version' --output text)
+    remove=()
+    if [ "${current}" != "None" ]; then
+        remove=(--remove-entries "Cidr=${current}")
+    fi
+    aws ec2 modify-managed-prefix-list --prefix-list-id "${id}" --current-version "${version}" \
+        --add-entries "Cidr=${cidr},Description={{ label }}" ${remove[@]+"${remove[@]}"} \
+        --query 'PrefixList.State' --output text
+    echo "updated ${name}: ${current} -> ${cidr} ({{ label }})"

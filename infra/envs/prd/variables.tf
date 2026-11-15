@@ -45,3 +45,18 @@ variable "tfstate_key" {
   description = "Object key of the Terraform state in the bucket. Must match backend.tf."
   type        = string
 }
+
+variable "enable_alb" {
+  description = "Whether to create the ALB and its DNS record and certificate. Set to false to cut the cost while the environment is idle."
+  type        = bool
+}
+
+variable "zone_name" {
+  description = "Name of the existing public hosted zone to create the records in."
+  type        = string
+}
+
+variable "domain_name" {
+  description = "Fully qualified domain name of this project."
+  type        = string
+}
