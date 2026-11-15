@@ -20,12 +20,12 @@ module.exports = async ({ github, context }) => {
   const raw = fs.readFileSync(planFile, "utf8");
   const plan = raw.length > LIMIT ? raw.slice(-LIMIT) : raw;
 
-  const status = process.env.PLAN_EXITCODE === "0" ? "成功" : "失敗";
+  const status = process.env.PLAN_EXITCODE === "0" ? "Success" : "Failed";
   const body = [
     MARKER,
     `### terraform plan (${process.env.ENV_NAME}): ${status}`,
     "",
-    "<details><summary>結果を開く</summary>",
+    "<details><summary>Result</summary>",
     "",
     "```",
     plan,
@@ -43,14 +43,15 @@ module.exports = async ({ github, context }) => {
   });
   const existing = comments.find((c) => c.body && c.body.startsWith(MARKER));
 
-  if (existing) {
-    await github.rest.issues.updateComment({
-      owner,
-      repo,
-      comment_id: existing.id,
-      body,
-    });
-  } else {
+  if (!existing) {
     await github.rest.issues.createComment({ owner, repo, issue_number, body });
+    return;
   }
+
+  await github.rest.issues.updateComment({
+    owner,
+    repo,
+    comment_id: existing.id,
+    body,
+  });
 };

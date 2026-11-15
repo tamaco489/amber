@@ -1,0 +1,35 @@
+image := "amber-api"
+
+default:
+    @just --list
+
+
+# ==========================================================================================
+# 静的検査とテスト
+# ==========================================================================================
+# 整形する
+fmt:
+    golangci-lint fmt
+
+# lint を実行する (設定は .golangci.yaml)
+lint:
+    golangci-lint run
+
+# テストを実行する
+test:
+    go test -race ./...
+
+# lint とテストをまとめて実行する
+check: lint test
+
+
+# ==========================================================================================
+# コンテナ
+# ==========================================================================================
+# linux/arm64 のイメージをビルドする (例: just backend::build v1)
+build version="dev":
+    docker build --platform linux/arm64 --build-arg VERSION={{ version }} -t {{ image }}:{{ version }} .
+
+# ECS と同じ条件 (ルートファイルシステムは読み取り専用) で、手元でコンテナを動かす
+run version="dev":
+    docker run --rm --read-only -p 8080:8080 --name {{ image }} {{ image }}:{{ version }}
