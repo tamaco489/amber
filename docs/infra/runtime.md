@@ -19,7 +19,7 @@ just infra::apply prd
 just infra::apply prd
 ```
 
-**Set it back to `false` on the same day.** Leaving it running costs about $3.5 per day.
+**Set it back to `false` on the same day.** Leaving it running costs about \$0.14 per hour (\$3.4 per day).
 
 With `false` committed, the `ci-infra` plan shows `No changes`. With `true`, every PR shows 37 resources to add and real changes get buried.
 
@@ -27,12 +27,12 @@ With `false` committed, the `ci-infra` plan shows `No changes`. With `true`, eve
 
 | Module    | Resources                                                                    | Cost (Tokyo)                       |
 | --------- | ---------------------------------------------------------------------------- | ---------------------------------- |
-| `alb`     | ALB, listeners, target groups, security group                                | about $0.035 per hour (incl. IPv4) |
+| `alb`     | ALB, listeners, target groups, security group                                | about $0.034 per hour (incl. IPv4) |
 | `dns`     | ACM certificate, Route 53 record (`ecs-lab.tamaco-blog.jp`)                  | free                               |
 | `network` | Interface endpoints (`ecr.api`, `ecr.dkr`, `logs`) in two AZs                | about $0.084 per hour              |
 | `ecs`     | Cluster, service, task definition, IAM roles, auto scaling, alarm, log group | about $0.025 per hour for 2 tasks  |
 
-The total is about $0.15 per hour.
+The total is about $0.14 per hour.
 
 ECS refers to the ALB rules and target groups, and pulls images and sends logs through the endpoints. The three are only useful together, so a single switch covers them all.
 
