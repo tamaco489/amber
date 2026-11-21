@@ -7,11 +7,12 @@ AWS (東京) に Terraform で構築し、小さな Go のアプリを動かす�
 
 規約は `.claude/rules/` にあり、すべて読み込まれる。**このファイルには規約を再掲しない。**
 
-| ファイル                           | 内容                                    |
-| ---------------------------------- | --------------------------------------- |
-| `.claude/rules/design-docs.md`     | 設計とタスクの置き場所 (Notion)         |
-| `.claude/rules/github/labels.md`   | ラベルの一覧                            |
-| `.claude/rules/github/workflow.md` | ブランチと PR の運用 (gh-flow との差分) |
+| ファイル                              | 内容                                    |
+| ------------------------------------- | --------------------------------------- |
+| `.claude/rules/notion/design-docs.md` | 設計とタスクの置き場所 (Notion)         |
+| `.claude/rules/github/labels.md`      | ラベルの一覧                            |
+| `.claude/rules/github/workflow.md`    | ブランチと PR の運用 (gh-flow との差分) |
+| `.claude/rules/aws/cost.md`           | 動かす時間を短くする検証の進め方        |
 
 `docs/` は規約ではなく現状の説明を持つ。**構成を変更したら一緒に更新する。** 英語 (`.md`) と日本語 (`.ja.md`) の両方を揃える。
 
@@ -25,7 +26,7 @@ AWS (東京) に Terraform で構築し、小さな Go のアプリを動かす�
 > [!IMPORTANT]
 >
 > - 時間課金のリソース (ALB、インターフェース型エンドポイント、ECS) は、`infra/envs/prd/terraform.tfvars` の `enable_runtime` で、まとめて作る・消す ([docs/infra/runtime.ja.md](docs/infra/runtime.ja.md))
-> - **検証が一区切りついたら、`enable_runtime = false` にして apply するようユーザーに促す。** 動かしたままだと 1 日あたり約 $3.5 かかる
+> - **検証が一区切りついたら、`enable_runtime = false` にして apply するようユーザーに促す。** 動かしたままだと 1 時間あたり約 \$0.14 (1 日あたり約 \$3.4) かかる
 > - PR は `enable_runtime = false` の状態で出す。`true` のままだと、`ci-infra` の plan に作り直しの差分が出て、本当の差分が埋もれる
 > - 時間課金のリソースや、置いておくだけで料金がかかるリソース (CloudWatch アラームなど) を足すときは、`enable_runtime` で消えるモジュールに入れる
 
