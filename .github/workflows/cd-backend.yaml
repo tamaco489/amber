@@ -1,0 +1,116 @@
+name: cd-backend
+
+# v* のタグの push でデプロイする
+# ロールバックや再デプロイは workflow_dispatch で、起動時に ref として戻したいタグを選ぶ
+#   - deploy 用のロールは v* のタグから発行されたトークンしか信頼しないため、ブランチを選ぶと AWS の認証で失敗する
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# デプロイの起動を 1 つずつ順に行う (途中で打ち切らない)
+# ECS のデプロイの完了は待たないため、前のデプロイが進行中のまま次のデプロイが始まることはある
+concurrency:
+  group: cd-backend
+  cancel-in-progress: false
+
+# 名前は infra の modules/ecr と modules/ecs の命名規則 (<env>-amber-...) に合わせる
+env:
+  AWS_REGION: ap-northeast-1
+  ECR_REPOSITORY: prd-amber-api
+  ECS_CLUSTER: prd-amber
+  ECS_SERVICE: prd-amber-api
+  CONTAINER_NAME: api
+
+jobs:
+  # ============================================================
+  # deploy
+  # ============================================================
+  # 1. linux/arm64 でビルドし、ECR に push する (イメージのタグ = Git のタグ)。push 済みのタグなら、ビルドせずにそのイメージを使う
+  # 2. 今のサービスのタスク定義のイメージを、ダイジェストで指定し直して、新しいリビジョンとして登録する
+  # 3. update-service で、Terraform で設定した方式のデプロイを始める。完了は待たない (結果は Slack の通知で確かめる)
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # OIDC のトークンを発行して、deploy 用のロールを引き受けるため
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+
+      # ロールの ARN はリポジトリの Variables (AWS_DEPLOY_ROLE_ARN) に置く
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # ECR はタグの上書きを禁止しているため、同じタグを流し直すとき (ロールバックや再デプロイ) は push しない
+      - name: Find pushed image
+        id: existing
+        run: .github/workflows/scripts/cd-backend/find-image.sh
+
+      - if: steps.existing.outputs.digest == ''
+        uses: docker/setup-buildx-action@v4
+
+      # provenance と sbom を付けると、タグの付いたイメージインデックスと、タグなしの子のイメージに分かれる
+      # タグなしのイメージは ECR のライフサイクルで 1 日後に消されるため、付けずに 1 つのイメージにする
+      - if: steps.existing.outputs.digest == ''
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: backend
+          platforms: linux/arm64
+          push: true
+          provenance: false
+          sbom: false
+          tags: ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.ref_name }}
+          build-args: VERSION=${{ github.ref_name }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # タスク定義に書くイメージを、タグではなくダイジェストで組み立てる (<registry>/<repository>@sha256:...)
+      # ダイジェストは、push 済みのタグならそのイメージのもの、この実行で push したならビルドの結果のものを使う
+      - name: Resolve image
+        id: image
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          DIGEST: ${{ steps.existing.outputs.digest || steps.build.outputs.digest }}
+        run: |
+          if [ -z "$DIGEST" ]; then
+            echo "::error::Could not resolve the image digest for $GITHUB_REF_NAME"
+            exit 1
+          fi
+          echo "image=$REGISTRY/$ECR_REPOSITORY@$DIGEST" >> "$GITHUB_OUTPUT"
+
+      # サービスが現在使っているタスク定義を複製し、コンテナのイメージだけを差し替えた新しいリビジョンとして登録する
+      - name: Register task definition
+        id: taskdef
+        env:
+          IMAGE: ${{ steps.image.outputs.image }}
+        run: .github/workflows/scripts/cd-backend/register-task-definition.sh
+
+      # 登録したリビジョンでデプロイを始める。方式 (ローリング、ブルー/グリーンなど) は Terraform のサービスの設定に従う
+      # デプロイの完了は待たずに終わる。新しいデプロイの ID とタスク定義を、ログに残す
+      - name: Update service
+        env:
+          TASK_DEFINITION: ${{ steps.taskdef.outputs.arn }}
+        run: |
+          aws ecs update-service --cluster "$ECS_CLUSTER" --service "$ECS_SERVICE" \
+            --task-definition "$TASK_DEFINITION" \
+            --query 'service.deployments[?status==`PRIMARY`].[id,taskDefinition]' --output text
+
+      # デプロイしたバージョン (Git のタグ)、イメージ、タスク定義を、実行結果のページ (ジョブのサマリー) に表にして残す
+      # この実行で push したか (false なら push 済みのイメージを流し直した) も書き、ロールバックの実行と見分けられるようにする
+      - name: Summary
+        env:
+          IMAGE: ${{ steps.image.outputs.image }}
+          TASK_DEFINITION: ${{ steps.taskdef.outputs.arn }}
+          PUSHED: ${{ steps.existing.outputs.digest == '' }}
+        run: .github/workflows/scripts/cd-backend/write-deploy-summary.sh
