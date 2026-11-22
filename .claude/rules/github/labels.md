@@ -9,10 +9,10 @@ Issue と PR に付ける GitHub のラベルと、コミットメッセージ�
 
 | ラベル     | 色        | 対象スコープ                                                                             |
 | ---------- | --------- | ---------------------------------------------------------------------------------------- |
-| `backend`  | `#1d3557` | Go の実装 (`backend/` 配下。検証用アプリとフックの Lambda)                               |
-| `infra`    | `#8b4513` | Terraform (`infra/` 配下)                                                                |
-| `loadtest` | `#c2e812` | k6 の負荷試験 (`loadtest/` 配下)                                                         |
-| `ci`       | `#3c1361` | CI ワークフロー (`.github/workflows/ci-*.yaml`)                                          |
-| `cd`       | `#24292f` | CD ワークフロー・デプロイ (`.github/workflows/cd-*.yaml`)                                |
+| `backend`  | `#3d6bf0` | Go の実装 (`backend/` 配下。検証用アプリとフックの Lambda)                               |
+| `infra`    | `#bc12cc` | Terraform (`infra/` 配下)                                                                |
+| `loadtest` | `#3c1361` | k6 の負荷試験 (`loadtest/` 配下)                                                         |
+| `ci`       | `#8ffdfe` | CI ワークフロー (`.github/workflows/ci-*.yaml`)                                          |
+| `cd`       | `#de491d` | CD ワークフロー・デプロイ (`.github/workflows/cd-*.yaml`)                                |
 | `claude`   | `#f49c51` | Claude Code の設定 (`CLAUDE.md`、`.claude/` 配下)                                        |
 | `repo`     | `#0e8a16` | リポジトリ全体 (`README`、`docs/` 配下、`.github/` の非ワークフロー、直下の設定ファイル) |
