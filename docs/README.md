@@ -36,7 +36,7 @@ The findings are kept as material for choosing settings.
 ## Tools
 
 Tools used on local machines. Go, golangci-lint, Terraform, tflint and trivy are pinned in `.tool-versions` (asdf), which both local machines and CI read.
-The others are not pinned; the versions shown are the ones confirmed to work.
+actionlint and shellcheck are pinned in `ci-actions.yaml`. The others are not pinned; the versions shown are the ones confirmed to work.
 
 | Tool          | Version | Used for                                                       |
 | ------------- | ------- | -------------------------------------------------------------- |
@@ -49,6 +49,8 @@ The others are not pinned; the versions shown are the ones confirmed to work.
 | AWS CLI       | 2.40.0  | Checking state, updating the prefix list, logging in to ECR    |
 | k6            | -       | Load testing during deployments                                |
 | just          | 1.46.0  | Task recipes (`just backend::push`, `just infra::plan`, ...)   |
+| actionlint    | 1.7.12  | Linting GitHub Actions workflows (pinned in `ci-actions.yaml`) |
+| shellcheck    | 0.11.0  | Linting shell scripts (pinned in `ci-actions.yaml`)            |
 | asdf          | 0.18.0  | Managing tool versions (`.tool-versions`)                      |
 
 ## Documents
@@ -57,4 +59,5 @@ The others are not pinned; the versions shown are the ones confirmed to work.
 | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | [Stopping and restarting the environment](./infra/runtime.md) | Creating and destroying the billed resources with `enable_runtime`, and what always stays |
 | [Applying task definition changes](./cd/task-definition.md)   | Getting task definition changes made in Terraform onto the service with `cd-backend`      |
+| [Checking workflows and scripts](./ci/workflow-lint.md)       | What `ci-actions` checks with actionlint and shellcheck, and how to run it locally        |
 | [Ruleset for v* tags](./github/tag-ruleset.md)                | Limiting who can create, update and delete `v*` tags (the deployment trigger) to admins   |
