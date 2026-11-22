@@ -6,7 +6,7 @@ on:
       - "infra/**"
       - ".tool-versions"
       - ".github/workflows/ci-infra.yaml"
-      - ".github/workflows/scripts/comment-plan.js"
+      - ".github/workflows/scripts/ci-infra/comment-plan.js"
 
 permissions:
   contents: read
@@ -144,7 +144,7 @@ jobs:
           PLAN_EXITCODE: ${{ steps.plan.outputs.exitcode }}
         with:
           script: |
-            const run = require(`${process.env.GITHUB_WORKSPACE}/.github/workflows/scripts/comment-plan.js`);
+            const run = require(`${process.env.GITHUB_WORKSPACE}/.github/workflows/scripts/ci-infra/comment-plan.js`);
             await run({ github, context });
       - name: Fail if plan failed
         if: steps.plan.outputs.exitcode != '0'

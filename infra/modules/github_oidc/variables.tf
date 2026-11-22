@@ -22,3 +22,8 @@ variable "tfstate_key" {
   description = "Object key of the Terraform state in the bucket."
   type        = string
 }
+
+variable "ecr_repository_arn" {
+  description = "ARN of the ECR repository that the deploy role pushes the api image to."
+  type        = string
+}

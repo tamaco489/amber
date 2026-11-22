@@ -56,7 +56,9 @@ ECS は、ALB のルールとターゲットグループを参照し、イメー
 - **変わるもの**: ARN、ID、ALB の DNS 名、証明書、ターゲットグループ
 - **変わらないもの**: ドメイン (`https://ecs-lab.tamaco-blog.jp`)、リソースの名前、ECR のイメージ
 
-ECS のサービスは、最初は `api_image_digest` のイメージ (v1) で起動します。CD で別の版をデプロイしていても、作り直すと v1 に戻ります。
+ECS のサービスは、最初は ECR の `bootstrap` のタグのイメージで起動します (Terraform が plan のときにダイジェストを引きます)。CD で別のバージョンをデプロイしていても、作り直すと `bootstrap` に戻ります。続けて検証するバージョンは、作り直したあとに CD (`workflow_dispatch` でタグを選ぶ) で流し直します。
+
+`bootstrap` のイメージは、ECR のライフサイクルで消えないようにしています (古いものを消すのは `v*` のタグだけ)。消えると、`enable_runtime = true` の plan がエラーになります。push し直すには `just backend::push bootstrap` を実行します。
 
 ## 新しいリソースを足すとき
 

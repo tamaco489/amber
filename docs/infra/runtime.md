@@ -56,7 +56,9 @@ Every switch creates the resources anew.
 - **Changes**: ARNs, IDs, the ALB DNS name, the certificate, the target groups
 - **Stays the same**: the domain (`https://ecs-lab.tamaco-blog.jp`), resource names, images in ECR
 
-The ECS service starts with the image in `api_image_digest` (v1). Even if CD has deployed another version, recreating brings it back to v1.
+The ECS service starts with the image tagged `bootstrap` in ECR (Terraform looks up its digest when planning). Even if CD has deployed another version, recreating brings it back to `bootstrap`. To keep verifying a version, deploy it again with CD after recreating (`workflow_dispatch` with the tag selected).
+
+The ECR lifecycle policy never expires the `bootstrap` image (it only expires `v*` tags). If it were gone, the plan with `enable_runtime = true` would fail. Push it again with `just backend::push bootstrap`.
 
 ## Adding new resources
 

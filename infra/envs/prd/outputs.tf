@@ -18,6 +18,11 @@ output "plan_role_arn" {
   value       = module.github_oidc.plan_role_arn
 }
 
+output "deploy_role_arn" {
+  description = "ARN of the IAM role for the cd-backend deploy. Register it as the AWS_DEPLOY_ROLE_ARN repository variable."
+  value       = module.github_oidc.deploy_role_arn
+}
+
 output "api_repository_url" {
   description = "URL of the ECR repository for the api image."
   value       = module.ecr_api.repository_url
