@@ -27,8 +27,8 @@ resource "aws_ecr_repository" "this" {
 
 # 古いイメージを消す
 #   - タグなしのイメージは、push から 1 日で消す
-#   - それ以外は、新しいものから keep_image_count 個だけ残す (ロールバックの検証で数世代前に戻せれば足りる)
-#   - tagStatus = any のルールは、優先度をいちばん低く (rulePriority を最大に) する決まりがある
+#   - CD が push するバージョンのイメージ (v* のタグ) は、新しいものから keep_image_count 個だけ残す (ロールバックの検証で数世代前に戻せれば足りる)
+#   - それ以外のタグ (最初のタスク定義で使う bootstrap) は消さない。消すと、enable_runtime で作り直したときにタスクが起動できなくなる
 resource "aws_ecr_lifecycle_policy" "this" {
   repository = aws_ecr_repository.this.name
 
@@ -49,11 +49,12 @@ resource "aws_ecr_lifecycle_policy" "this" {
       },
       {
         rulePriority = 2
-        description  = "Keep only the latest ${var.keep_image_count} images"
+        description  = "Keep only the latest ${var.keep_image_count} release images (v*)"
         selection = {
-          tagStatus   = "any"
-          countType   = "imageCountMoreThan"
-          countNumber = var.keep_image_count
+          tagStatus      = "tagged"
+          tagPatternList = ["v*"]
+          countType      = "imageCountMoreThan"
+          countNumber    = var.keep_image_count
         }
         action = {
           type = "expire"
