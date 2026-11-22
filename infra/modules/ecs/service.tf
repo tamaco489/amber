@@ -92,8 +92,10 @@ resource "aws_ecs_service" "api" {
   deployment_minimum_healthy_percent = 100
   deployment_maximum_percent         = 200
 
+  # ベイクタイム: ロールバック付きのアラーム (期間 60 秒) を 1〜2 回判定できる長さにする (provider の型は文字列)
   deployment_configuration {
-    strategy = "ROLLING"
+    strategy             = "ROLLING"
+    bake_time_in_minutes = "2"
   }
 
   deployment_circuit_breaker {
