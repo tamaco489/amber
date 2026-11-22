@@ -1,0 +1,20 @@
+# リポジトリの直下で実行する (actionlint は直下の .github/workflows を検査する)
+set working-directory := ".."
+
+default:
+    @just --list
+
+
+# ==========================================================================================
+# 静的検査
+# ==========================================================================================
+# actionlint でワークフローを検査する (run: の中は shellcheck で検査される)
+lint:
+    actionlint
+
+# scripts/ 配下の .sh を shellcheck で検査する
+shellcheck:
+    find .github/workflows/scripts -name '*.sh' -print0 | xargs -0 shellcheck
+
+# PR を出す前の静的検査をまとめて実行する
+check: lint shellcheck
