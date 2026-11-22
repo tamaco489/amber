@@ -57,3 +57,4 @@ The others are not pinned; the versions shown are the ones confirmed to work.
 | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | [Stopping and restarting the environment](./infra/runtime.md) | Creating and destroying the billed resources with `enable_runtime`, and what always stays |
 | [Applying task definition changes](./cd/task-definition.md)   | Getting task definition changes made in Terraform onto the service with `cd-backend`      |
+| [Ruleset for v* tags](./github/tag-ruleset.md)                | Limiting who can create, update and delete `v*` tags (the deployment trigger) to admins   |
