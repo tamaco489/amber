@@ -56,3 +56,4 @@ The others are not pinned; the versions shown are the ones confirmed to work.
 | Document                                                      | What it covers                                                                            |
 | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | [Stopping and restarting the environment](./infra/runtime.md) | Creating and destroying the billed resources with `enable_runtime`, and what always stays |
+| [Applying task definition changes](./cd/task-definition.md)   | Getting task definition changes made in Terraform onto the service with `cd-backend`      |
