@@ -1,0 +1,53 @@
+name: ci-actions
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/**"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/**"
+
+permissions:
+  contents: read
+
+# 同じ PR への連続 push で、古い実行を打ち切る
+concurrency:
+  group: ci-actions-${{ github.ref }}
+  cancel-in-progress: true
+
+# 手元 (brew) で動作を確かめたバージョンに合わせる。上げるときは、リリースのページのチェックサムも書き換える
+env:
+  ACTIONLINT_VERSION: 1.7.12
+  ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+  SHELLCHECK_VERSION: 0.11.0
+  SHELLCHECK_SHA256: 8c3be12b05d5c177a04c29e3c78ce89ac86f1595681cab149b65b97c4e227198
+
+jobs:
+  # ============================================================
+  # lint check
+  # ============================================================
+  # actionlint で、ワークフローの書き方 (構文、式、action の入力、runner のラベルなど) に誤りがないかを確かめる
+  # run: の中のシェルは、actionlint が shellcheck を呼んで検査する
+  # scripts/ 配下の .sh は、shellcheck で直接検査する
+  # どちらも、指摘が 1 件でもあると失敗する (shellcheck の info を含む)
+  actions-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # バージョンを固定した actionlint と shellcheck を入れ、PATH の先頭に置く
+      - name: Install actionlint and shellcheck
+        run: .github/workflows/scripts/ci-actions/install-tools.sh
+
+      - name: Show versions
+        run: |
+          actionlint -version
+          shellcheck --version
+
+      - name: Lint workflows
+        run: actionlint -color
+      - name: Check scripts
+        run: find .github/workflows/scripts -name '*.sh' -print0 | xargs -0 --no-run-if-empty shellcheck --color=always

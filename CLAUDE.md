@@ -21,6 +21,7 @@ AWS (東京) に Terraform で構築し、小さな Go のアプリを動かす�
 | [docs/README.ja.md](docs/README.ja.md)                         | ドキュメントの索引                                                  | 文書を追加・移動したとき                              |
 | [docs/infra/runtime.ja.md](docs/infra/runtime.ja.md)           | `enable_runtime` で時間課金のリソースを止める運用                   | `enable_runtime` で作る・消すリソースを増減させたとき |
 | [docs/cd/task-definition.ja.md](docs/cd/task-definition.ja.md) | Terraform で変えたタスク定義を、`cd-backend` でサービスに届ける手順 | `cd-backend` の複製元を変えたとき                     |
+| [docs/ci/workflow-lint.ja.md](docs/ci/workflow-lint.ja.md)     | `ci-actions` の検査 (actionlint、shellcheck) と手元での流し方       | 検査の対象・ツール・バージョンを変えたとき            |
 
 ## 費用を止める運用
 

@@ -104,6 +104,8 @@ jobs:
         env:
           TASK_DEFINITION: ${{ steps.taskdef.outputs.arn }}
         run: |
+          # JMESPath の `PRIMARY` (リテラル) を展開させないため、--query はわざとシングルクォートで囲む
+          # shellcheck disable=SC2016
           aws ecs update-service --cluster "$ECS_CLUSTER" --service "$ECS_SERVICE" \
             --task-definition "$TASK_DEFINITION" \
             --query 'service.deployments[?status==`PRIMARY`].[id,taskDefinition]' --output text
