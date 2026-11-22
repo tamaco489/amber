@@ -12,4 +12,4 @@ domain_name = "ecs-lab.tamaco-blog.jp"
 
 # 時間課金のリソース (ALB と DNS、インターフェース型エンドポイント、ECS) を、まとめて作るか消すかを切り替える
 # 検証するときだけ true にして apply し、終わったら false に戻して apply する
-enable_runtime = false
+enable_runtime = true
