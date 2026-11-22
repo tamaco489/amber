@@ -38,22 +38,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # ubuntu-latest に入っている shellcheck はバージョンが決まらないため、固定したものを入れて PATH の先頭に置く
+      # バージョンを固定した actionlint と shellcheck を入れ、PATH の先頭に置く
       - name: Install actionlint and shellcheck
-        run: |
-          bin="$RUNNER_TEMP/bin"
-          mkdir -p "$bin"
-          cd "$RUNNER_TEMP"
+        run: .github/workflows/scripts/ci-actions/install-tools.sh
 
-          curl -fsSLO "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
-          echo "$ACTIONLINT_SHA256  actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" | sha256sum -c -
-          tar -xzf "actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" -C "$bin" actionlint
-
-          curl -fsSLO "https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK_VERSION}/shellcheck-v${SHELLCHECK_VERSION}.linux.x86_64.tar.xz"
-          echo "$SHELLCHECK_SHA256  shellcheck-v${SHELLCHECK_VERSION}.linux.x86_64.tar.xz" | sha256sum -c -
-          tar -xJf "shellcheck-v${SHELLCHECK_VERSION}.linux.x86_64.tar.xz" --strip-components=1 -C "$bin" "shellcheck-v${SHELLCHECK_VERSION}/shellcheck"
-
-          echo "$bin" >> "$GITHUB_PATH"
       - name: Show versions
         run: |
           actionlint -version
