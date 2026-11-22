@@ -13,6 +13,7 @@ module "github_oidc" {
   github_oidc_sub_prefix = var.github_oidc_sub_prefix
   tfstate_bucket         = var.tfstate_bucket
   tfstate_key            = var.tfstate_key
+  ecr_repository_arn     = module.ecr_api.repository_arn
 }
 
 module "ecr_api" {
