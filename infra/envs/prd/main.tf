@@ -45,6 +45,16 @@ module "dns" {
   alb_zone_id  = module.alb[0].zone_id
 }
 
+# 最初のタスク定義で使う api のイメージ (手元から bootstrap のタグで push したもの) のダイジェストを、ECR から引く
+#   - ECR にイメージがなければ、plan の時点でエラーになる
+#   - module.ecs の中に置くと、module.ecs の depends_on のために apply まで読まれず、plan で気づけないため、ここに置く
+data "aws_ecr_image" "api_initial" {
+  count = var.enable_runtime ? 1 : 0
+
+  repository_name = module.ecr_api.repository_name
+  image_tag       = "bootstrap"
+}
+
 module "ecs" {
   source = "../../modules/ecs"
   count  = var.enable_runtime ? 1 : 0
@@ -56,7 +66,7 @@ module "ecs" {
   alb_security_group_id = module.alb[0].security_group_id
   alb_arn_suffix        = module.alb[0].arn_suffix
   target_group_arn      = module.alb[0].target_group_arns["blue"]
-  image                 = "${module.ecr_api.repository_url}@${var.api_image_digest}"
+  image                 = "${module.ecr_api.repository_url}@${data.aws_ecr_image.api_initial[0].image_digest}"
 
   # タスクはインターフェース型エンドポイント経由でイメージを pull し、ログを出す
   # サービスはエンドポイントを参照していないため、エンドポイントができてからタスクを起動するよう、順序を明示する

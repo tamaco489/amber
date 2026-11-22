@@ -47,16 +47,6 @@ variable "enable_runtime" {
   type        = bool
 }
 
-variable "api_image_digest" {
-  description = "Digest (sha256:...) of the api image in ECR used by the first task definition. Later revisions are registered by the CD workflow."
-  type        = string
-
-  validation {
-    condition     = can(regex("^sha256:[0-9a-f]{64}$", var.api_image_digest))
-    error_message = "api_image_digest must be in the form sha256:<64 hex characters>."
-  }
-}
-
 variable "zone_name" {
   description = "Name of the existing public hosted zone to create the records in."
   type        = string
