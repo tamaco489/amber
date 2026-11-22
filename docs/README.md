@@ -55,9 +55,10 @@ actionlint and shellcheck are pinned in `ci-actions.yaml`. The others are not pi
 
 ## Documents
 
-| Document                                                      | What it covers                                                                            |
-| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| [Stopping and restarting the environment](./infra/runtime.md) | Creating and destroying the billed resources with `enable_runtime`, and what always stays |
-| [Applying task definition changes](./cd/task-definition.md)   | Getting task definition changes made in Terraform onto the service with `cd-backend`      |
-| [Checking workflows and scripts](./ci/workflow-lint.md)       | What `ci-actions` checks with actionlint and shellcheck, and how to run it locally        |
-| [Ruleset for v* tags](./github/tag-ruleset.md)                | Limiting who can create, update and delete `v*` tags (the deployment trigger) to admins   |
+| Document                                                      | What it covers                                                                                                     |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| [Stopping and restarting the environment](./infra/runtime.md) | Creating and destroying the billed resources with `enable_runtime`, and what always stays                          |
+| [Lifecycle of the tfstate bucket](./infra/tfstate.md)         | The lifecycle rule that keeps up to 10 old versions in the tfstate bucket, and how to put it in place and check it |
+| [Applying task definition changes](./cd/task-definition.md)   | Getting task definition changes made in Terraform onto the service with `cd-backend`                               |
+| [Checking workflows and scripts](./ci/workflow-lint.md)       | What `ci-actions` checks with actionlint and shellcheck, and how to run it locally                                 |
+| [Ruleset for v* tags](./github/tag-ruleset.md)                | Limiting who can create, update and delete `v*` tags (the deployment trigger) to admins                            |
