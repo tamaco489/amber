@@ -23,3 +23,17 @@ gh-flow の hook はサブ PR (`feature/sub-issue-<番号>/...`) の base が `m
 - 種別は gh-flow の `commit-types.md` の type を使う (`feat` だけは `feature` と綴る)
 - サブ Issue のタイトル (`[sub] [<種別>] ...`) と、メイン Issue との親子の紐付けはそのまま残す
 - `/gh-flow:create-release-pr` は使わない
+
+## push したあとの CI の監視
+
+> [!IMPORTANT]
+> **PR のブランチに push したら、毎回 CI を監視する。** 初回の push も、PR を出したあとの追加の push も同じ。
+
+- 監視は、バックグラウンドの別エージェントに任せる。メインの会話は、監視を待たずに次の作業を進める
+- エージェントには、読み取りだけを頼む (ファイルの修正、コミット、push、workflow の再実行、PR へのコメント、AWS と Terraform の操作はさせない)
+- エージェントに頼む内容
+  - `gh pr checks <番号> --watch` で、すべてのチェックが終わるまで待つ
+  - 失敗したチェックは、`gh run view <run-id> --log-failed` で失敗したステップとエラーを取る
+  - `ci-infra` の plan のコメントを読み、差分 (作る・変える・作り直す・消すリソース) が想定どおりかを確かめる。想定 (例: apply 済みなら `No changes`) をエージェントに伝えておく
+  - plan のコメントは push のたびに同じものを書き換える。見出しの下の `Commit:` が最新のコミットと一致するかで、今回の push の結果かを確かめる (作成日時は最初の push のまま変わらない)
+- 結果が届いたら、ユーザーに伝える。失敗していれば、原因と直し方を示す
