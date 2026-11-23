@@ -14,6 +14,9 @@ module "github_oidc" {
   tfstate_bucket         = var.tfstate_bucket
   tfstate_key            = var.tfstate_key
   ecr_repository_arn     = module.ecr_api.repository_arn
+
+  deploy_event_source      = module.notification.deploy_event_source
+  deploy_event_detail_type = module.notification.deploy_event_detail_type
 }
 
 module "ecr_api" {
@@ -21,6 +24,16 @@ module "ecr_api" {
 
   env  = var.env
   name = "api"
+}
+
+# デプロイの通知 (Slack)
+#   - 置いておくだけでは料金がかからない (呼び出しごとの課金) ため、enable_runtime で消さずに常に置く
+#   - 消すと、接続に入れたボットトークンも消え、作り直すたびに入れ直す必要がある
+module "notification" {
+  source = "../../modules/notification"
+
+  env              = var.env
+  slack_channel_id = var.slack_channel_id
 }
 
 # 時間課金のリソースは、enable_runtime で作るかどうかを切り替える (使わない間の費用を止めるため)

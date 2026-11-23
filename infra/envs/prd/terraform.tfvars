@@ -10,6 +10,9 @@ tfstate_key            = "envs/prd/terraform.tfstate"
 zone_name   = "tamaco-blog.jp"
 domain_name = "ecs-lab.tamaco-blog.jp"
 
+# デプロイの通知先 (#amber-prd-deploy)
+slack_channel_id = "C0CL01Z8YRL"
+
 # 時間課金のリソース (ALB と DNS、インターフェース型エンドポイント、ECS) を、まとめて作るか消すかを切り替える
 # 検証するときだけ true にして apply し、終わったら false に戻して apply する
 enable_runtime = false
