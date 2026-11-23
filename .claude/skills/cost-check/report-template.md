@@ -40,8 +40,8 @@
 | ほぼ \$0         | ECR `prd-amber-api`                          | 合計 100 MB 未満                                          |      |      |          |      |
 | ほぼ \$0         | tfstate のバケット                           | key ごとの古い版が 10 個以下 (超えたら NG)                |      |      |          |      |
 | ほぼ \$0         | 通知の Lambda のロググループ                 | 保存期間が 3 日 (まだないのもよい)                        |      |      |          |      |
-| 無料             | 通知 (EventBridge、SQS のデッドレターキュー) | デッドレターキューが 0 件                                 |      |      |          |      |
-| 無料             | Secrets Manager (`events!connection/...`)    | 接続のもの 1 つだけ                                       |      |      |          |      |
+| 無料             | 通知 (EventBridge、SQS のデッドレターキュー) | デッドレターキューが 0 件。接続と API 送信先がない        |      |      |          |      |
+| 無料             | Secrets Manager (`events!connection/...`)    | ない (接続と一緒に消えている)                             |      |      |          |      |
 | 無料             | DynamoDB の通知の状態のテーブル              | 1 つだけで、`PAY_PER_REQUEST`                             |      |      |          |      |
 | 無料             | SSM のボットトークンのパラメータ             | 1 つだけで、`Standard`                                    |      |      |          |      |
 | 無料             | 通知の Lambda の関数                         | 1 つだけで、`provided.al2023`、`arm64` (まだないのもよい) |      |      |          |      |
