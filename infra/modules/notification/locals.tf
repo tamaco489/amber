@@ -1,16 +1,17 @@
 locals {
   name_prefix = "${var.env}-amber"
 
-  # 通知の Lambda の関数名 (関数は後から置く。ロググループの名前に使うため、先に決める)
+  # 通知の Lambda の関数名 (ロググループの名前にも使う)
   notifier_function_name = "${local.name_prefix}-notification"
 
   account_id = data.aws_caller_identity.current.account_id
   region     = data.aws_region.current.region
 
   # 通知する ECS のサービス
-  #   - サービスは enable_runtime = false の間は存在しないため、modules/ecs の出力ではなく、同じ命名規則で組み立てた ARN を使う
+  #   - サービスは enable_runtime = false の間は存在しないため、modules/ecs の出力ではなく、同じ命名規則で組み立てた名前と ARN を使う
   #     (modules/ecs の名前を変えたら合わせる)
-  ecs_service_arn = "arn:aws:ecs:${local.region}:${local.account_id}:service/${local.name_prefix}/${local.name_prefix}-api"
+  ecs_service_name = "${local.name_prefix}-api"
+  ecs_service_arn  = "arn:aws:ecs:${local.region}:${local.account_id}:service/${local.name_prefix}/${local.ecs_service_name}"
 
   # cd-backend が送る、デプロイを始めたことのイベント
   #   - source は aws. で始められない (AWS のサービスのイベントと区別するため)
