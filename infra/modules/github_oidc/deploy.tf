@@ -5,7 +5,7 @@
 # cd-backend でイメージを push し、ECS にデプロイするロール
 #   - 信頼条件: このリポジトリの v* のタグから発行されたトークンだけ (タグの push と、タグを選んだ workflow_dispatch)
 #   - ブランチから実行すると sub が refs/heads/... になるため、引き受けられない
-#   - 権限: ECR への push、タスク定義の登録、サービスの更新、タスクのロールを ECS に渡すこと
+#   - 権限: ECR への push、タスク定義の登録、サービスの更新、タスクのロールを ECS に渡すこと、デプロイを始めたことの通知
 resource "aws_iam_role" "deploy" {
   name               = "${local.name_prefix}-github-actions-deploy"
   assume_role_policy = data.aws_iam_policy_document.deploy_trust.json
@@ -100,6 +100,26 @@ data "aws_iam_policy_document" "deploy" {
       test     = "StringEquals"
       variable = "iam:PassedToService"
       values   = ["ecs-tasks.amazonaws.com"]
+    }
+  }
+
+  # デプロイを始めたことのイベントを、default のイベントバスに送る (Slack への通知)
+  #   - source と detail-type を、通知のルールが拾う値に限る (ほかのイベントを装って送れないようにする)
+  statement {
+    sid       = "PutDeployStartedEvent"
+    actions   = ["events:PutEvents"]
+    resources = [local.default_event_bus_arn]
+
+    condition {
+      test     = "StringEquals"
+      variable = "events:source"
+      values   = [var.deploy_event_source]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "events:detail-type"
+      values   = [var.deploy_event_detail_type]
     }
   }
 }

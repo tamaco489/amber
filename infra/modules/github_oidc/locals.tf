@@ -13,4 +13,7 @@ locals {
     "arn:aws:iam::${local.account_id}:role/${local.name_prefix}-ecs-task-execution",
     "arn:aws:iam::${local.account_id}:role/${local.name_prefix}-ecs-task",
   ]
+
+  # デプロイを始めたことのイベントを送る先
+  default_event_bus_arn = "arn:aws:events:${local.region}:${local.account_id}:event-bus/default"
 }
