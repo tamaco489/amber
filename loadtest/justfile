@@ -1,0 +1,40 @@
+# k6 は手元に入れず、版を固定したコンテナで動かす (Docker は backend のビルドでも使う)
+# DOC: https://hub.docker.com/r/grafana/k6
+k6_image := "grafana/k6:2.4.0"
+
+# 既定の送り先 (ALB の前の Route 53 のレコード)
+url := "https://ecs-lab.tamaco-blog.jp"
+
+default:
+    @just --list
+
+
+# ==========================================================================================
+# 負荷試験 (送り先が動いている間だけ実行する。prd は enable_runtime = true の間だけ動く)
+# ==========================================================================================
+# デプロイ中に一定の RPS で送り、失敗の種類とバージョンごとの件数を出す (例: just loadtest::run 20 10m)
+#   - 1 件でも失敗すれば、k6 は 0 以外のコード (閾値の超過は 99) で終わる
+#   - versions は件数を出すバージョン番号 (カンマ区切り)。ほかの番号は unknown として数える
+#   - 手元のコンテナに送るときは base_url に http://host.docker.internal:8080 を渡す
+[doc("一定の RPS で送り、失敗の種類とバージョンごとの件数を出す (1 件でも失敗すれば 99 で終わる)")]
+run rate="10" duration="5m" versions="v1,v2" base_url=url:
+    docker run --rm -i \
+        -v "{{ source_directory() }}/scripts:/scripts:ro" \
+        -e BASE_URL={{ base_url }} \
+        -e RATE={{ rate }} \
+        -e DURATION={{ duration }} \
+        -e VERSIONS={{ versions }} \
+        {{ k6_image }} run /scripts/deploy.js
+
+
+# ==========================================================================================
+# 静的検査
+# ==========================================================================================
+# スクリプトを読み込み、組み立てた設定 (シナリオと閾値) を表示する。リクエストは送らない
+inspect rate="10" duration="5m" versions="v1,v2":
+    docker run --rm -i \
+        -v "{{ source_directory() }}/scripts:/scripts:ro" \
+        -e RATE={{ rate }} \
+        -e DURATION={{ duration }} \
+        -e VERSIONS={{ versions }} \
+        {{ k6_image }} inspect --execution-requirements /scripts/deploy.js
