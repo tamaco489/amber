@@ -23,9 +23,13 @@ func (n *Notifier) reply(ctx context.Context, ev *deploy.Event, parent *deploy.P
 
 // rewriteParent は、イベントを親に反映して書き換える
 //   - このイベントで親を作ったときは、作るときに反映済みのため書き換えない
-//   - ロールバックでない進行中は、親を変えない
+//   - ロールバックでない進行中は、ECS のデプロイのページの URL を引けたときだけ書き換える (開始が先に届いて作った親に、URL を足す)
+//     親に URL が入っていても書き換える。保存したあと chat.update の前に止まったときに、再試行で chat.update をやり直せるようにするため
 func (n *Notifier) rewriteParent(ctx context.Context, ev *deploy.Event, created bool) error {
-	if created || ev.Kind == deploy.KindInProgress {
+	if created {
+		return nil
+	}
+	if ev.Kind == deploy.KindInProgress && ev.ECSDeploymentURL == "" {
 		return nil
 	}
 	return n.step(ctx, ev.ID+"#parent", func() error {

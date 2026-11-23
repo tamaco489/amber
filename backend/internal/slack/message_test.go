@@ -119,13 +119,17 @@ func TestParentMessage(t *testing.T) {
 				"*Status*\nDeploying",
 				"*Triggered by*\ntamaco489",
 				"*Task definition*\nprd-amber-api:7",
-				"<" + testRunURL + "|GitHub Actions run>",
+				"<" + testECSURL + "|ECS deployment>   <" + testRunURL + "|GitHub Actions run>",
 			},
 		},
 		"バージョンがまだ分からない": {
 			parent:     &deploy.Parent{Service: testService, Status: deploy.StatusDeploying},
 			wantHeader: ":rocket: Deploying: prd-amber-api",
-			wantBody:   []string{"*Triggered by*\nnone", "GitHub Actions run: none"},
+			wantBody:   []string{"*Triggered by*\nnone", "ECS deployment: none   GitHub Actions run: none"},
+		},
+		"GitHub から始めていないデプロイでも、ECS のリンクを先頭に付ける": {
+			parent:   &deploy.Parent{Service: testService, Status: deploy.StatusDeploying, ECSDeploymentURL: testECSURL},
+			wantBody: []string{"<" + testECSURL + "|ECS deployment>   GitHub Actions run: none"},
 		},
 		"完了": {
 			parent:     completed,

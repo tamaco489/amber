@@ -6,6 +6,9 @@ import (
 	"sync"
 	"time"
 
+	awsecs "github.com/aws/aws-sdk-go-v2/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
+
 	"github.com/tamaco489/amber/backend/internal/deploy"
 	"github.com/tamaco489/amber/backend/internal/dynamodb"
 	"github.com/tamaco489/amber/backend/internal/slack"
@@ -180,4 +183,20 @@ func (s *fakeStore) PutParent(_ context.Context, p *deploy.Parent, _ time.Time) 
 	}
 	s.parents[p.DeploymentID] = *p
 	return nil
+}
+
+// ================================================================================
+// ECS の API の差し替え (ecs.Client に渡す)
+// ================================================================================
+
+type fakeECSAPI struct {
+	deployments []types.ServiceDeploymentBrief // ListServiceDeployments が返すサービスデプロイ
+	err         error                          // ListServiceDeployments が返すエラー
+}
+
+func (f *fakeECSAPI) ListServiceDeployments(_ context.Context, _ *awsecs.ListServiceDeploymentsInput, _ ...func(*awsecs.Options)) (*awsecs.ListServiceDeploymentsOutput, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return &awsecs.ListServiceDeploymentsOutput{ServiceDeployments: f.deployments}, nil
 }

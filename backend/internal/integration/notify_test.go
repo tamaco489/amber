@@ -1,17 +1,21 @@
 package integration_test
 
 import (
+	"errors"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 
+	"github.com/tamaco489/amber/backend/internal/ecs"
 	"github.com/tamaco489/amber/backend/internal/notifier"
 	"github.com/tamaco489/amber/backend/internal/slack"
 )
 
 // TestNotify は、生のイベントを順に渡し、Slack に届く親の投稿と返信の本文を確かめる
+//   - ECS のデプロイのページの URL は、ecs.Client に ListServiceDeployments の応答の差し替えを渡して組む
 func TestNotify(t *testing.T) {
 	type reply struct {
 		header string // 返信の見出し
@@ -19,6 +23,7 @@ func TestNotify(t *testing.T) {
 	}
 
 	tests := map[string]struct {
+		ecs         *fakeECSAPI // ECS の API の差し替え (nil なら、サービスデプロイが見つからない)
 		events      []events.CloudWatchEvent
 		wantHeader  string   // 親の今の見出し
 		wantColor   string   // 親の今の帯の色
@@ -26,6 +31,7 @@ func TestNotify(t *testing.T) {
 		wantReplies []reply  // 返信 (届いた順)
 	}{
 		"開始、進行中、完了": {
+			ecs:        &fakeECSAPI{deployments: []types.ServiceDeploymentBrief{testServiceDeployment}},
 			events:     []events.CloudWatchEvent{evStarted, evInProgress, evCompleted},
 			wantHeader: ":white_check_mark: Deployed v3: prd-amber-api",
 			wantColor:  slack.ColorSuccess,
@@ -34,7 +40,7 @@ func TestNotify(t *testing.T) {
 				"*Triggered by*\ntamaco489",
 				"*Task definition*\nprd-amber-api:7",
 				"*Completed at*\n2026-11-23 11:12:30 (JST)",
-				"<" + testRunURL + "|GitHub Actions run>",
+				"<" + testECSURL + "|ECS deployment>   <" + testRunURL + "|GitHub Actions run>",
 			},
 			wantReplies: []reply{
 				{header: ":rocket: Deploy started: v3", color: slack.ColorInfo},
@@ -52,13 +58,37 @@ func TestNotify(t *testing.T) {
 				{header: ":rocket: Deploy started: v3", color: slack.ColorInfo},
 			},
 		},
-		"GitHub から始めていないデプロイ": {
+		"GitHub から始めていないデプロイでも、ECS のリンクが付く": {
+			ecs:        &fakeECSAPI{deployments: []types.ServiceDeploymentBrief{testServiceDeployment}},
 			events:     []events.CloudWatchEvent{evInProgress},
 			wantHeader: ":rocket: Deploying: prd-amber-api",
 			wantColor:  slack.ColorInfo,
-			wantBody:   []string{"*Triggered by*\nnone", "GitHub Actions run: none"},
+			wantBody:   []string{"*Triggered by*\nnone", "<" + testECSURL + "|ECS deployment>   GitHub Actions run: none"},
 			wantReplies: []reply{
 				{header: ":hourglass_flowing_sand: Deployment in progress", color: slack.ColorWarning},
+			},
+		},
+		"開始が先に届いた親に、進行中で ECS のリンクを足す": {
+			ecs:        &fakeECSAPI{deployments: []types.ServiceDeploymentBrief{testServiceDeployment}},
+			events:     []events.CloudWatchEvent{evStarted, evInProgress},
+			wantHeader: ":rocket: Deploying v3: prd-amber-api",
+			wantColor:  slack.ColorInfo,
+			wantBody:   []string{"<" + testECSURL + "|ECS deployment>   <" + testRunURL + "|GitHub Actions run>"},
+			wantReplies: []reply{
+				{header: ":rocket: Deploy started: v3", color: slack.ColorInfo},
+				{header: ":hourglass_flowing_sand: Deployment in progress", color: slack.ColorWarning},
+			},
+		},
+		"ECS のデプロイを引けなくても、通知は続け、リンクを none にする": {
+			ecs:        &fakeECSAPI{err: errors.New("AccessDeniedException")},
+			events:     []events.CloudWatchEvent{evStarted, evInProgress, evCompleted},
+			wantHeader: ":white_check_mark: Deployed v3: prd-amber-api",
+			wantColor:  slack.ColorSuccess,
+			wantBody:   []string{"ECS deployment: none   <" + testRunURL + "|GitHub Actions run>"},
+			wantReplies: []reply{
+				{header: ":rocket: Deploy started: v3", color: slack.ColorInfo},
+				{header: ":hourglass_flowing_sand: Deployment in progress", color: slack.ColorWarning},
+				{header: ":white_check_mark: Deployment completed", color: slack.ColorSuccess},
 			},
 		},
 		"ロールバック": {
@@ -88,9 +118,14 @@ func TestNotify(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			fs := &fakeSlack{}
+			api := tt.ecs
+			if api == nil {
+				api = &fakeECSAPI{}
+			}
 			n := &notifier.Notifier{
 				Slack:   fs,
 				Store:   newFakeStore(),
+				ECS:     ecs.New(api),
 				Channel: testChannel,
 				Service: testService,
 				Now:     func() time.Time { return testTime },
