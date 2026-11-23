@@ -38,15 +38,16 @@ ECS refers to the ALB rules and target groups, and pulls images and sends logs t
 
 ## What stays regardless of the switch
 
-| Resource                                                      | Cost                                                                                                                   |
-| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| VPC, subnets, IGW, route tables, security groups              | free                                                                                                                   |
-| S3 gateway endpoint                                           | free                                                                                                                   |
-| ECR repository (`prd-amber-api`)                              | $0.10 per GB-month; images are a few MB, so almost $0                                                                  |
-| IAM role for plan (`prd-amber-github-actions-plan`)           | free                                                                                                                   |
-| IAM role for deploy (`prd-amber-github-actions-deploy`)       | free                                                                                                                   |
-| Prefix list for the test listener (managed outside Terraform) | free                                                                                                                   |
-| tfstate bucket (`prd-amber-tfstate`)                          | a lifecycle rule keeps up to 10 old versions ([Lifecycle of the tfstate bucket](./tfstate.md)); a few MB, so almost $0 |
+| Resource                                                                                       | Cost                                                                                                                   |
+| ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| VPC, subnets, IGW, route tables, security groups                                               | free                                                                                                                   |
+| S3 gateway endpoint                                                                            | free                                                                                                                   |
+| ECR repository (`prd-amber-api`)                                                               | $0.10 per GB-month; images are a few MB, so almost $0                                                                  |
+| IAM role for plan (`prd-amber-github-actions-plan`)                                            | free                                                                                                                   |
+| IAM role for deploy (`prd-amber-github-actions-deploy`)                                        | free                                                                                                                   |
+| Prefix list for the test listener (managed outside Terraform)                                  | free                                                                                                                   |
+| tfstate bucket (`prd-amber-tfstate`)                                                           | a lifecycle rule keeps up to 10 old versions ([Lifecycle of the tfstate bucket](./tfstate.md)); a few MB, so almost $0 |
+| Deployment notifications (EventBridge rules, connection, API destination, SQS queue, IAM role) | billed per invocation and request only; $0 while idle ([Deployment notifications to Slack](./notification.md))         |
 
 While stopped, the cost is almost $0 (under one cent per month).
 
@@ -67,7 +68,7 @@ Put resources billed by the hour, or billed just for existing, in a module that 
 
 - Billed by the hour: ALB, NAT gateway, interface endpoints, Fargate tasks
 - Billed for existing: CloudWatch alarms ($0.10 per alarm-month)
-- Not yet confirmed: EventBridge connections (creating one also creates a Secrets Manager secret)
+- EventBridge connections create a Secrets Manager secret, but its cost is included in the API destination charge, so they cost nothing while idle
 
 ## References
 

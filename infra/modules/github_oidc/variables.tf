@@ -27,3 +27,13 @@ variable "ecr_repository_arn" {
   description = "ARN of the ECR repository that the deploy role pushes the api image to."
   type        = string
 }
+
+variable "deploy_event_source" {
+  description = "Source of the events that the deploy role may send to the default event bus when it starts a deployment."
+  type        = string
+}
+
+variable "deploy_event_detail_type" {
+  description = "Detail type of the events that the deploy role may send to the default event bus when it starts a deployment."
+  type        = string
+}

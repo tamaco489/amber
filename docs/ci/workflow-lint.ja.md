@@ -32,4 +32,4 @@ just actions::shellcheck  # scripts/ 配下の .sh だけ
 
 意図した書き方で指摘が出るときは、その行の直前に `# shellcheck disable=<コード>` を、理由のコメントと一緒に書きます。
 
-例: `cd-backend.yaml` の「Update service」は、JMESPath の `` `PRIMARY` `` を展開させないため、`--query` をわざとシングルクォートで囲んでいます。そのため SC2016 を抑えています。
+例: `cd-backend` の `update-service.sh` は、JMESPath の `` `PRIMARY` `` を展開させないため、`--query` をわざとシングルクォートで囲んでいます。そのため SC2016 を抑えています。

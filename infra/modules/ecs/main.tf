@@ -5,8 +5,8 @@
 # タスクを動かすクラスター
 #   - Container Insights は料金がかかるため使わない (性能のデータを CloudWatch Logs に送り、そこからメトリクスを作るため、ログとメトリクスの両方に課金される)
 #   - サービスの CPU とメモリの使用率は、Container Insights がなくても標準のメトリクスで見られ、オートスケーリングにはそれで足りる
-# Ref: https://aws.amazon.com/cloudwatch/pricing/
-# Ref: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/available-metrics.html
+# DOC: https://aws.amazon.com/cloudwatch/pricing/
+# DOC: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/available-metrics.html
 resource "aws_ecs_cluster" "this" {
   name = local.name_prefix
 

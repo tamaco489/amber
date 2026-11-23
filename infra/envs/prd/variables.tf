@@ -56,3 +56,9 @@ variable "domain_name" {
   description = "Fully qualified domain name of this project."
   type        = string
 }
+
+# 通知先の Slack のチャンネル (ID は秘密ではない。投稿にはボットトークンが要る)
+variable "slack_channel_id" {
+  description = "ID of the Slack channel to post the deployment notifications to."
+  type        = string
+}

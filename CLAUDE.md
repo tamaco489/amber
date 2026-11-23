@@ -7,12 +7,13 @@ AWS (東京) に Terraform で構築し、小さな Go のアプリを動かす�
 
 規約は `.claude/rules/` にあり、すべて読み込まれる。**このファイルには規約を再掲しない。**
 
-| ファイル                              | 内容                                    |
-| ------------------------------------- | --------------------------------------- |
-| `.claude/rules/notion/design-docs.md` | 設計とタスクの置き場所 (Notion)         |
-| `.claude/rules/github/labels.md`      | ラベルの一覧                            |
-| `.claude/rules/github/workflow.md`    | ブランチと PR の運用 (gh-flow との差分) |
-| `.claude/rules/aws/cost.md`           | 動かす時間を短くする検証の進め方        |
+| ファイル                              | 内容                                     |
+| ------------------------------------- | ---------------------------------------- |
+| `.claude/rules/notion/design-docs.md` | 設計とタスクの置き場所 (Notion)          |
+| `.claude/rules/github/labels.md`      | ラベルの一覧                             |
+| `.claude/rules/github/workflow.md`    | ブランチと PR の運用 (gh-flow との差分)  |
+| `.claude/rules/aws/cost.md`           | 動かす時間を短くする検証の進め方         |
+| `.claude/rules/code/comments.md`      | コードのコメントの書き方 (出典の `DOC:`) |
 
 `docs/` は規約ではなく現状の説明を持つ。**構成を変更したら一緒に更新する。** 英語 (`.md`) と日本語 (`.ja.md`) の両方を揃える。
 
@@ -21,6 +22,7 @@ AWS (東京) に Terraform で構築し、小さな Go のアプリを動かす�
 | [docs/README.ja.md](docs/README.ja.md)                         | ドキュメントの索引                                                               | 文書を追加・移動したとき                              |
 | [docs/infra/runtime.ja.md](docs/infra/runtime.ja.md)           | `enable_runtime` で時間課金のリソースを止める運用                                | `enable_runtime` で作る・消すリソースを増減させたとき |
 | [docs/infra/tfstate.ja.md](docs/infra/tfstate.ja.md)           | tfstate のバケットのライフサイクル (`infra/tfstate/lifecycle.json`) と入れる手順 | `infra/tfstate/lifecycle.json` を変えたとき           |
+| [docs/infra/notification.ja.md](docs/infra/notification.ja.md) | デプロイの Slack への通知 (`modules/notification/`) とボットトークンを入れる手順 | 通知の内容・ルール・送り先を変えたとき                |
 | [docs/cd/task-definition.ja.md](docs/cd/task-definition.ja.md) | Terraform で変えたタスク定義を、`cd-backend` でサービスに届ける手順              | `cd-backend` の複製元を変えたとき                     |
 | [docs/ci/workflow-lint.ja.md](docs/ci/workflow-lint.ja.md)     | `ci-actions` の検査 (actionlint、shellcheck) と手元での流し方                    | 検査の対象・ツール・バージョンを変えたとき            |
 

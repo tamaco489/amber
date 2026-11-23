@@ -34,7 +34,7 @@ resource "aws_vpc_endpoint" "s3" {
 #   - プライベートサブネットごとに ENI を 1 つ配置する
 #   - private_dns_enabled: VPC の中では、サービスの通常の名前がこのエンドポイントの ENI の IP に解決される
 #   - 料金は「エンドポイント 1 個 × AZ 1 つ」ごとの時間課金 (東京で 1 時間 0.014 ドル)
-# Ref: https://aws.amazon.com/privatelink/pricing/
+# DOC: https://aws.amazon.com/privatelink/pricing/
 resource "aws_vpc_endpoint" "interface" {
   for_each = local.interface_endpoint_services
 
