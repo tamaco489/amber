@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 通知: EventBridge のルール、デッドレターキュー、消した接続・API 送信先・接続のシークレットが残っていないこと、
+# 通知: EventBridge のルール、 DLQ 、消した接続・API 送信先・接続のシークレットが残っていないこと、
 #       通知の Lambda の関数と状態のテーブルとボットトークンのパラメータ (置いておくだけなら無料)
 set -uo pipefail
 source "$(dirname "$0")/../lib.sh"
@@ -15,7 +15,7 @@ query '[.Connections[] | {name: .Name, state: .ConnectionState}] | sort_by(.name
 query '[.ApiDestinations[] | {name: .Name, state: .ApiDestinationState}] | sort_by(.name)' \
     aws events list-api-destinations --name-prefix prd-amber-
 
-section "SQS: デッドレターキューのメッセージ数 (0 件)"
+section "SQS: DLQ のメッセージ数 (0 件)"
 dlq_url=$(aws sqs get-queue-url --queue-name prd-amber-notification-dlq --query QueueUrl --output text 2>&1)
 if [[ "$dlq_url" != https://* ]]; then
     echo "ERROR: キューが見つからない: ${dlq_url}"

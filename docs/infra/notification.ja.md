@@ -11,7 +11,7 @@ EventBridge のルールがイベントを拾い、通知の Lambda (`backend/cm
 1. ECS と `cd-backend` が、デプロイのイベントを default のイベントバスに送る
 2. EventBridge のルール (4 本) が拾い、イベントをそのまま Lambda `prd-amber-notification` に渡す (非同期の呼び出し)
 3. Lambda が、Slack の `chat.postMessage` (親と返信)、`chat.update` (親の書き換え)、`reactions.add` (スタンプ) を呼ぶ
-4. 失敗したものは、SQS のデッドレターキュー `prd-amber-notification-dlq` に入る (ルールが Lambda に届けられなかったときと、Lambda が再試行しても失敗したときの両方)
+4. 失敗したものは、SQS の DLQ (デッドレターキュー) `prd-amber-notification-dlq` に入る (ルールが Lambda に届けられなかったときと、Lambda が再試行しても失敗したときの両方)
 
 ## 通知する内容
 
@@ -50,15 +50,15 @@ EventBridge のルールがイベントを拾い、通知の Lambda (`backend/cm
 | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | ルール `prd-amber-ecs-deployment-{in-progress,completed,failed}` | ECS のデプロイの状態の変化を、`eventName` ごとに拾う (default のイベントバス)                                                            |
 | ルール `prd-amber-deploy-started`                                | `cd-backend` が送るイベント (`amber.cd-backend` / `Deployment Started`) を拾う                                                           |
-| ルールのターゲット                                               | 関数 `prd-amber-notification`。入力変換はせず、イベントをそのまま渡す。届けられなければ 1 時間・10 回まで再試行し、デッドレターキューへ  |
+| ルールのターゲット                                               | 関数 `prd-amber-notification`。入力変換はせず、イベントをそのまま渡す。届けられなければ 1 時間・10 回まで再試行し、 DLQ へ               |
 | 関数のリソースベースのポリシー                                   | EventBridge (`events.amazonaws.com`) が、上の 4 本のルールからだけ関数を呼べる (`source_arn` で絞る)                                     |
 | Lambda の関数 `prd-amber-notification`                           | `provided.al2023`、`arm64`、128 MB、タイムアウト 30 秒。コードは `cd-notifier` が置く ([通知の Lambda のデプロイ](../cd/notifier.ja.md)) |
-| 関数の非同期の呼び出しの設定                                     | 関数がエラーを返したら 2 回まで再試行し、1 時間より古いものは捨てる。失敗したものはデッドレターキューに送る                              |
+| 関数の非同期の呼び出しの設定                                     | 関数がエラーを返したら 2 回まで再試行し、1 時間より古いものは捨てる。失敗したものは DLQ に送る                                           |
 | DynamoDB のテーブル `prd-amber-notification`                     | デプロイごとの親の投稿と、手順ごとの済んだ印 (キーは `pk`)。オンデマンドで、3 日後に TTL (`expires_at`) で消える                         |
 | SSM のパラメータ `/prd-amber/notification/slack-bot-token`       | Slack のボットトークン (標準の `SecureString`)。ダミー値で作り、本物の値は CLI で入れる                                                  |
-| IAM ロール `prd-amber-notification-lambda`                       | 実行ロール。テーブル、パラメータ、ロググループ、デッドレターキューへの送信                                                               |
+| IAM ロール `prd-amber-notification-lambda`                       | 実行ロール。テーブル、パラメータ、ロググループ、 DLQ への送信                                                                            |
 | CloudWatch のロググループ `/aws/lambda/prd-amber-notification`   | 関数のログを 3 日残す                                                                                                                    |
-| SQS キュー `prd-amber-notification-dlq`                          | 通知に失敗したイベントを 3 日残す (デッドレターキュー)。中身は下の「デッドレターキュー」                                                 |
+| SQS キュー `prd-amber-notification-dlq`                          | 通知に失敗したイベントを 3 日残す (DLQ)。中身は下の「 DLQ 」の節                                                                         |
 | deploy 用のロールの `events:PutEvents`                           | `cd-backend` から送れるのは、上の `source` と `detail-type` の組み合わせのイベントだけ                                                   |
 
 - ECS のルールを `eventName` ごとに分けているのは、`eventName` が決まった値で、絞り込みに使えるためです
@@ -104,7 +104,7 @@ unset SLACK_BOT_TOKEN
 - 関数は、トークンをコールドスタートのときに 1 回だけ読みます。入れ替えた直後は、動いている実行環境が古いトークンを使い続けます。すぐに切り替えたいときは、`cd-notifier` を流し直します (コードを置き直すと、実行環境が作り直されます)
 - アプリを入れ直してもトークンの値が変わらなければ、入れ直す必要はありません。値が変わったら、上の手順で入れ直します
 
-## デッドレターキュー
+## DLQ
 
 通知に失敗したイベントは、キュー `prd-amber-notification-dlq` に 3 日残ります。入る経路は 2 つあり、メッセージの形が違います。
 
@@ -150,7 +150,7 @@ aws sqs receive-message \
     --profile tamaco489 --region ap-northeast-1
   ```
 
-- **デッドレターキュー:** 上の「中を見る」のとおりです
+- **DLQ:** 上の「中を見る」のとおりです
 - **ルールのメトリクス:** CloudWatch の `AWS/Events` の `Invocations`、`FailedInvocations` (ディメンション `RuleName`) で、ルールが動いたかと、Lambda に届けられたかが分かります
 - **関数のメトリクス:** CloudWatch の `AWS/Lambda` の `Errors`、`AsyncEventsDropped`、`DestinationDeliveryFailures` (ディメンション `FunctionName`) で、関数のエラーと、失敗の送り先に送れたかが分かります
 

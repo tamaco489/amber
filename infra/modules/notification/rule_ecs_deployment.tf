@@ -36,7 +36,7 @@ resource "aws_cloudwatch_event_rule" "ecs_deployment" {
 
 # ターゲットは通知の Lambda (lambda.tf)。入力変換はせず、イベントをそのまま渡す (Lambda が EventBridge のイベントの形で読む)
 #   - EventBridge は Lambda を非同期で呼び、Lambda が呼び出しを受け付けた時点で成功とみなす
-#   - そのため、下の再試行とデッドレターキューが受け持つのは、Lambda に届けられなかったとき (スロットリング、権限の不足など) だけ
+#   - そのため、下の再試行と DLQ が受け持つのは、Lambda に届けられなかったとき (スロットリング、権限の不足など) だけ
 #   - 関数がエラーを返したとき (Slack が ok: false を返したときを含む) の再試行と送り先は、Lambda の側 (lambda.tf の非同期の呼び出しの設定) で決める
 #   - Lambda のターゲットはロールを使わない。呼ぶ許可は、関数のリソースベースのポリシー (aws_lambda_permission) で与える
 # DOC: https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-rule-retry-policy.html
