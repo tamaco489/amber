@@ -1,5 +1,7 @@
 # cost-check: AWS MCP の run_script に、このファイルの中身をそのまま渡す (書き換えない)
-#   - CLI (scripts/cli/check.sh) とは別の経路で、時間課金のリソースと CloudWatch アラームを読み取りで確かめる
+#   - CLI (scripts/cli/check.sh) とは別の経路で、時間課金のリソース (ECS、ELB、VPC エンドポイント、NAT、EC2、ENI、EIP、EBS、
+#     オートスケーリング) と CloudWatch アラームを読み取りで確かめる
+#   - run_script では globals 関数などが禁止されている。実行環境が用意する call_boto3 は、そのまま参照する
 #   - 読み取りの API (Describe* / List* / Get*) だけを呼ぶ
 #   - 並び順を固定し、時刻は JST で返す。同じ状態なら、時刻を除いて同じ結果になる
 #   - API が失敗したら、その項目は {"error": "..."} になる (空と区別するため)
@@ -8,9 +10,6 @@
 import asyncio
 import datetime
 from typing import Any
-
-# call_boto3 は、run_script の実行環境が用意する関数 (このファイルの中では定義しない)
-call_boto3 = globals()["call_boto3"]
 
 REGION = "ap-northeast-1"
 JST = datetime.timezone(datetime.timedelta(hours=9))
@@ -22,7 +21,8 @@ def now():
 
 async def call(service: str, operation: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
     try:
-        return await call_boto3(
+        # call_boto3 は run_script の実行環境が用意する関数。globals 関数は run_script で禁止されているため、そのまま参照する
+        return await call_boto3(  # pyright: ignore[reportUndefinedVariable]
             service_name=service, operation_name=operation, region_name=REGION, params=params or {}
         )
     except Exception as e:  # noqa: BLE001
@@ -53,7 +53,8 @@ async def main():
     vpc_id = (vpcs.get("Vpcs") or [{}])[0].get("VpcId") if "error" not in vpcs else None
     vpc_filter = [{"Name": "vpc-id", "Values": [vpc_id or "none"]}]
 
-    clusters, lbs, tgs, endpoints, nats, instances, enis, alarms = await asyncio.gather(
+    amber_tag = [{"Name": "tag:project", "Values": ["amber"]}]
+    clusters, lbs, tgs, endpoints, nats, instances, enis, eips, volumes, scalable, alarms = await asyncio.gather(
         call("ecs", "DescribeClusters", {"clusters": ["prd-amber"]}),
         call("elbv2", "DescribeLoadBalancers"),
         call("elbv2", "DescribeTargetGroups"),
@@ -61,6 +62,9 @@ async def main():
         call("ec2", "DescribeNatGateways", {"Filter": vpc_filter}),
         call("ec2", "DescribeInstances", {"Filters": vpc_filter}),
         call("ec2", "DescribeNetworkInterfaces", {"Filters": vpc_filter}),
+        call("ec2", "DescribeAddresses", {"Filters": amber_tag}),
+        call("ec2", "DescribeVolumes", {"Filters": amber_tag}),
+        call("application-autoscaling", "DescribeScalableTargets", {"ServiceNamespace": "ecs"}),
         call("cloudwatch", "DescribeAlarms"),
     )
 
@@ -90,6 +94,12 @@ async def main():
             [{"type": x.get("InterfaceType"), "description": x.get("Description"),
                 "publicIp": x.get("Association", {}).get("PublicIp")} for x in r.get("NetworkInterfaces", [])],
             key=lambda x: x["description"] or "")),
+        "elasticIps": pick(eips, lambda r: sorted(
+            [x["PublicIp"] for x in r.get("Addresses", [])])),
+        "ebsVolumes": pick(volumes, lambda r: sorted(
+            [x["VolumeId"] for x in r.get("Volumes", [])])),
+        "scalableTargets": pick(scalable, lambda r: sorted(
+            [x["ResourceId"] for x in r.get("ScalableTargets", []) if "prd-amber" in x["ResourceId"]])),
         "alarms": pick(alarms, lambda r: sorted(
             [a["AlarmName"] for a in r.get("MetricAlarms", []) + r.get("CompositeAlarms", [])
                 if "prd-amber" in a["AlarmName"]])),
