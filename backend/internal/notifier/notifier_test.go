@@ -1,6 +1,7 @@
 package notifier
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -205,6 +206,7 @@ func newTestNotifier(fs *fakeSlack, st *fakeStore, fe *fakeECS) *Notifier {
 		Channel: testChannel,
 		Service: testService,
 		Now:     func() time.Time { return testTime },
+		Sleep:   func(context.Context, time.Duration) error { return nil },
 	}
 }
 
