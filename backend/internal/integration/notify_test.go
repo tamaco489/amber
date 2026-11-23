@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"testing"
@@ -51,7 +52,7 @@ func TestNotify(t *testing.T) {
 		"進行中が開始より先に届く": {
 			events:     []events.CloudWatchEvent{evInProgress, evStarted},
 			wantHeader: ":rocket: Deploying v3: prd-amber-api",
-			wantColor:  slack.ColorInfo,
+			wantColor:  slack.ColorNeutral,
 			wantBody:   []string{"*Status*\nDeploying", "*Triggered by*\ntamaco489"},
 			wantReplies: []reply{
 				{header: ":hourglass_flowing_sand: Deployment in progress", color: slack.ColorWarning},
@@ -62,7 +63,7 @@ func TestNotify(t *testing.T) {
 			ecs:        &fakeECSAPI{deployments: []types.ServiceDeploymentBrief{testServiceDeployment}},
 			events:     []events.CloudWatchEvent{evInProgress},
 			wantHeader: ":rocket: Deploying: prd-amber-api",
-			wantColor:  slack.ColorInfo,
+			wantColor:  slack.ColorNeutral,
 			wantBody:   []string{"*Triggered by*\nnone", "<" + testECSURL + "|ECS deployment>   GitHub Actions run: none"},
 			wantReplies: []reply{
 				{header: ":hourglass_flowing_sand: Deployment in progress", color: slack.ColorWarning},
@@ -72,7 +73,7 @@ func TestNotify(t *testing.T) {
 			ecs:        &fakeECSAPI{deployments: []types.ServiceDeploymentBrief{testServiceDeployment}},
 			events:     []events.CloudWatchEvent{evStarted, evInProgress},
 			wantHeader: ":rocket: Deploying v3: prd-amber-api",
-			wantColor:  slack.ColorInfo,
+			wantColor:  slack.ColorNeutral,
 			wantBody:   []string{"<" + testECSURL + "|ECS deployment>   <" + testRunURL + "|GitHub Actions run>"},
 			wantReplies: []reply{
 				{header: ":rocket: Deploy started: v3", color: slack.ColorInfo},
@@ -129,6 +130,7 @@ func TestNotify(t *testing.T) {
 				Channel: testChannel,
 				Service: testService,
 				Now:     func() time.Time { return testTime },
+				Sleep:   func(context.Context, time.Duration) error { return nil },
 			}
 
 			for _, ev := range tt.events {

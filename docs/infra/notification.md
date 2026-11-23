@@ -32,7 +32,7 @@ For each deployment ID (`ecs-svc/...`), one parent post is created, and later no
 
 | Event                  | Reply in the thread                                       | Parent post                                                                        |
 | ---------------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| The first event        | (same as the rows below)                                  | Created (blue, `Deploying`)                                                        |
+| The first event        | (same as the rows below)                                  | Created (black, `Deploying`)                                                       |
 | Deployment started     | `Deploy started` (`Redeploy` when the same tag is re-run) | Fills in the version, actor, task definition, and run link                         |
 | In progress            | `Deployment in progress` (yellow)                         | Unchanged                                                                          |
 | In progress (rollback) | `Rollback started` (red)                                  | Red, `Rolling back`                                                                |
