@@ -32,4 +32,4 @@ just actions::shellcheck  # .sh files under scripts/ only
 
 When intended code triggers a finding, put `# shellcheck disable=<code>` on the line before it, with a comment explaining why.
 
-Example: the "Update service" step in `cd-backend.yaml` wraps `--query` in single quotes on purpose, so that the JMESPath literal `` `PRIMARY` `` is not expanded. SC2016 is suppressed there.
+Example: `update-service.sh` of `cd-backend` wraps `--query` in single quotes on purpose, so that the JMESPath literal `` `PRIMARY` `` is not expanded. SC2016 is suppressed there.
