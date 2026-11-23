@@ -1,0 +1,5 @@
+# cost-check のスクリプトの shellcheck の設定
+#   - scripts/cli/checks/ のスクリプトは ../lib.sh を source する。エディターの拡張機能は -x を付けずに動かすため、
+#     ここで読み込んだファイルをたどるように設定する (付けないと SC1091 の警告が出る)
+external-sources=true
+source-path=SCRIPTDIR
