@@ -7,7 +7,6 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 
 	"github.com/tamaco489/amber/backend/internal/deploy"
-	"github.com/tamaco489/amber/backend/internal/deploy/deploytest"
 )
 
 func TestParseEvent(t *testing.T) {
@@ -20,43 +19,43 @@ func TestParseEvent(t *testing.T) {
 		wantErr         bool
 	}{
 		"開始": {
-			raw:         deploytest.Started("1", true),
+			raw:         startedEvent("1", true),
 			wantKind:    deploy.KindStarted,
-			wantService: deploytest.Service,
+			wantService: testService,
 			wantPushed:  true,
 		},
 		"push しない開始": {
-			raw:         deploytest.Started("1", false),
+			raw:         startedEvent("1", false),
 			wantKind:    deploy.KindStarted,
-			wantService: deploytest.Service,
+			wantService: testService,
 		},
 		"進行中": {
-			raw:         deploytest.EvInProgress,
+			raw:         ecsEvent("ev-in-progress", deploy.ECSInProgress, "ECS deployment ecs-svc/1234567890 in progress."),
 			wantKind:    deploy.KindInProgress,
 			wantService: "prd-amber-api",
 		},
 		"サーキットブレーカーによるロールバック": {
-			raw:         deploytest.EvRollback,
+			raw:         ecsEvent("ev-rollback", deploy.ECSInProgress, "ECS deployment circuit breaker: rolling back to deploymentId ecs-svc/111."),
 			wantKind:    deploy.KindRollback,
 			wantService: "prd-amber-api",
 		},
 		"アラームによるロールバック": {
-			raw:         deploytest.ECS("1", deploy.ECSInProgress, "ECS deployment alarms: Rolling back to deploymentId ecs-svc/111."),
+			raw:         ecsEvent("1", deploy.ECSInProgress, "ECS deployment alarms: Rolling back to deploymentId ecs-svc/111."),
 			wantKind:    deploy.KindRollback,
 			wantService: "prd-amber-api",
 		},
 		"完了": {
-			raw:         deploytest.EvCompleted,
+			raw:         ecsEvent("ev-completed", deploy.ECSCompleted, "ECS deployment ecs-svc/1234567890 completed."),
 			wantKind:    deploy.KindCompleted,
 			wantService: "prd-amber-api",
 		},
 		"失敗": {
-			raw:         deploytest.EvFailed,
+			raw:         ecsEvent("ev-failed", deploy.ECSFailed, "ECS deployment circuit breaker: task failed to start."),
 			wantKind:    deploy.KindFailed,
 			wantService: "prd-amber-api",
 		},
 		"知らない ECS のイベント名": {
-			raw:             deploytest.ECS("1", "SERVICE_DEPLOYMENT_STOPPED", ""),
+			raw:             ecsEvent("1", "SERVICE_DEPLOYMENT_STOPPED", ""),
 			wantUnsupported: true,
 		},
 		"知らない出どころ": {
@@ -89,7 +88,7 @@ func TestParseEvent(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			ev, err := deploy.ParseEvent(tt.raw, deploytest.Service)
+			ev, err := deploy.ParseEvent(tt.raw, testService)
 
 			if tt.wantUnsupported {
 				if !errors.Is(err, deploy.ErrUnsupported) {
@@ -115,8 +114,8 @@ func TestParseEvent(t *testing.T) {
 			if ev.Pushed != tt.wantPushed {
 				t.Errorf("pushed = %v, want %v", ev.Pushed, tt.wantPushed)
 			}
-			if ev.DeploymentID != deploytest.Deployment {
-				t.Errorf("deploymentId = %q, want %q", ev.DeploymentID, deploytest.Deployment)
+			if ev.DeploymentID != testDeployment {
+				t.Errorf("deploymentId = %q, want %q", ev.DeploymentID, testDeployment)
 			}
 		})
 	}

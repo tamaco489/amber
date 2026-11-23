@@ -2,9 +2,23 @@ package dynamodb
 
 import (
 	"context"
+	"time"
 
 	ddb "github.com/aws/aws-sdk-go-v2/service/dynamodb"
 )
+
+// テストで使う値
+const (
+	testChannel    = "C0TEST"
+	testService    = "prd-amber-api"
+	testDeployment = "ecs-svc/1234567890"
+	testParentTS   = "1700000000.000001"
+	testTaskDef    = "arn:aws:ecs:ap-northeast-1:111122223333:task-definition/prd-amber-api:7"
+	testRunURL     = "https://github.com/tamaco489/amber/actions/runs/1"
+)
+
+// testTime は、テストの時刻
+var testTime = time.Date(2026, 11, 23, 2, 12, 30, 0, time.UTC)
 
 // fakeAPI は、決めた結果を返すだけの API (呼び出しの中身を残す)
 type fakeAPI struct {

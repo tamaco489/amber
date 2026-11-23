@@ -2,18 +2,17 @@ package notifier
 
 import (
 	"errors"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 
 	"github.com/tamaco489/amber/backend/internal/deploy"
-	"github.com/tamaco489/amber/backend/internal/deploy/deploytest"
 	"github.com/tamaco489/amber/backend/internal/slack"
-	"github.com/tamaco489/amber/backend/internal/slack/slacktest"
 )
 
+// TestHandle は、処理の流れ (親の数、返信の数とスレッド、書き換え、スタンプ、再試行での重複) を確かめる
+//   - Slack に届く本文の中身 (見出し、色、項目) は、slack の単体テストと integration の結合テストで確かめる
 func TestHandle(t *testing.T) {
 	type call struct {
 		ev      events.CloudWatchEvent // 渡すイベント
@@ -25,184 +24,105 @@ func TestHandle(t *testing.T) {
 		calls []call                                           // 順に渡すイベント
 		check func(t *testing.T, fs *fakeSlack, st *fakeStore) // 結果を確かめる
 	}{
-		"開始が先に届くと、起動した人とリンク付きの親を作る": {
-			calls: []call{{ev: deploytest.EvStarted}, {ev: deploytest.EvInProgress}},
-			check: func(t *testing.T, fs *fakeSlack, _ *fakeStore) {
-				parents := fs.parents()
-				if len(parents) != 1 {
-					t.Fatalf("parents = %d, want 1", len(parents))
-				}
-				if got := slacktest.HeaderOf(parents[0]); got != ":rocket: Deploying v3: prd-amber-api" {
-					t.Errorf("parent header = %q", got)
-				}
-				body := slacktest.BodyOf(parents[0])
-				for _, want := range []string{"*Triggered by*\ntamaco489", "*Task definition*\nprd-amber-api:7", "<" + deploytest.RunURL + "|GitHub Actions run>", "*Status*\nDeploying"} {
-					if !strings.Contains(body, want) {
-						t.Errorf("parent body does not contain %q:\n%s", want, body)
-					}
-				}
-				if got := slacktest.ColorOf(parents[0]); got != slack.ColorInfo {
-					t.Errorf("parent color = %q, want %q", got, slack.ColorInfo)
-				}
-				if len(fs.replies()) != 2 {
-					t.Errorf("replies = %d, want 2", len(fs.replies()))
-				}
-				// 進行中は親を書き換えない
-				if len(fs.updates) != 0 {
-					t.Errorf("updates = %d, want 0", len(fs.updates))
+		"開始が先に届くと、起動した人の入った親を作る": {
+			calls: []call{{ev: evStarted}, {ev: evInProgress}},
+			check: func(t *testing.T, fs *fakeSlack, st *fakeStore) {
+				assertCounts(t, fs, 1, 2, 0, 0)
+				p := st.parents[testDeployment]
+				if p.Actor != "tamaco489" || p.Status != deploy.StatusDeploying {
+					t.Errorf("parent = %+v", p)
 				}
 			},
 		},
 		"進行中が開始より先に届いても、親は 1 つだけで、あとから埋まる": {
-			calls: []call{{ev: deploytest.EvInProgress}, {ev: deploytest.EvStarted}},
-			check: func(t *testing.T, fs *fakeSlack, _ *fakeStore) {
-				parents := fs.parents()
-				if len(parents) != 1 {
-					t.Fatalf("parents = %d, want 1", len(parents))
-				}
-				first := slacktest.BodyOf(parents[0])
-				if !strings.Contains(first, "*Triggered by*\nnone") || !strings.Contains(first, "GitHub Actions run: none") {
-					t.Errorf("first parent should have no actor and no link:\n%s", first)
-				}
-				if got := slacktest.HeaderOf(parents[0]); got != ":rocket: Deploying: prd-amber-api" {
-					t.Errorf("first parent header = %q", got)
-				}
-
-				if len(fs.updates) != 1 {
-					t.Fatalf("updates = %d, want 1", len(fs.updates))
-				}
-				updated := fs.updates[0]
-				if updated.TS == "" {
-					t.Errorf("update has no ts")
-				}
-				if got := slacktest.HeaderOf(updated); got != ":rocket: Deploying v3: prd-amber-api" {
-					t.Errorf("updated header = %q", got)
-				}
-				if !strings.Contains(slacktest.BodyOf(updated), "*Triggered by*\ntamaco489") {
-					t.Errorf("updated parent has no actor:\n%s", slacktest.BodyOf(updated))
-				}
-
-				// どちらの返信も、同じ親のスレッドに付く
-				replies := fs.replies()
-				if len(replies) != 2 {
-					t.Fatalf("replies = %d, want 2", len(replies))
-				}
-				for _, r := range replies {
-					if r.ThreadTS != updated.TS {
-						t.Errorf("reply thread_ts = %q, want %q", r.ThreadTS, updated.TS)
+			calls: []call{{ev: evInProgress}, {ev: evStarted}},
+			check: func(t *testing.T, fs *fakeSlack, st *fakeStore) {
+				assertCounts(t, fs, 1, 2, 1, 0)
+				parentTS := st.parents[testDeployment].TS
+				for _, r := range fs.replies() {
+					if r.ThreadTS != parentTS {
+						t.Errorf("reply thread_ts = %q, want %q", r.ThreadTS, parentTS)
 					}
+				}
+				if fs.updates[0].TS != parentTS {
+					t.Errorf("update ts = %q, want %q", fs.updates[0].TS, parentTS)
+				}
+				if got := st.parents[testDeployment].Actor; got != "tamaco489" {
+					t.Errorf("actor = %q, want tamaco489", got)
 				}
 			},
 		},
 		"同じイベントが 2 回届いても、返信は 1 件": {
-			calls: []call{{ev: deploytest.EvInProgress}, {ev: deploytest.EvInProgress}},
+			calls: []call{{ev: evInProgress}, {ev: evInProgress}},
 			check: func(t *testing.T, fs *fakeSlack, _ *fakeStore) {
-				if len(fs.parents()) != 1 {
-					t.Errorf("parents = %d, want 1", len(fs.parents()))
-				}
-				if len(fs.replies()) != 1 {
-					t.Errorf("replies = %d, want 1", len(fs.replies()))
-				}
+				assertCounts(t, fs, 1, 1, 0, 0)
 			},
 		},
 		"chat.update の失敗のあとに流し直しても、返信は重ならない": {
 			setup: func(fs *fakeSlack, _ *fakeStore) {
 				fs.failures = map[string]int{"chat.update": 1}
 			},
-			calls: []call{{ev: deploytest.EvStarted}, {ev: deploytest.EvCompleted, wantErr: true}, {ev: deploytest.EvCompleted}},
+			calls: []call{{ev: evStarted}, {ev: evCompleted, wantErr: true}, {ev: evCompleted}},
 			check: func(t *testing.T, fs *fakeSlack, _ *fakeStore) {
-				if len(fs.replies()) != 2 {
-					t.Errorf("replies = %d, want 2 (started, completed)", len(fs.replies()))
-				}
-				if len(fs.updates) != 1 {
-					t.Errorf("updates = %d, want 1", len(fs.updates))
-				}
-				if len(fs.reactions) != 1 {
-					t.Errorf("reactions = %d, want 1", len(fs.reactions))
-				}
+				assertCounts(t, fs, 1, 2, 1, 1)
 			},
 		},
 		"reactions.add の失敗のあとに流し直しても、書き換えと返信は重ならない": {
 			setup: func(fs *fakeSlack, _ *fakeStore) {
 				fs.failures = map[string]int{"reactions.add": 1}
 			},
-			calls: []call{{ev: deploytest.EvStarted}, {ev: deploytest.EvFailed, wantErr: true}, {ev: deploytest.EvFailed}},
+			calls: []call{{ev: evStarted}, {ev: evFailed, wantErr: true}, {ev: evFailed}},
 			check: func(t *testing.T, fs *fakeSlack, _ *fakeStore) {
-				if len(fs.replies()) != 2 || len(fs.updates) != 1 || len(fs.reactions) != 1 {
-					t.Errorf("replies = %d, updates = %d, reactions = %d, want 2, 1, 1", len(fs.replies()), len(fs.updates), len(fs.reactions))
-				}
+				assertCounts(t, fs, 1, 2, 1, 1)
 			},
 		},
 		"親の投稿の失敗のあとに流し直しても、親は 1 つだけ": {
 			setup: func(fs *fakeSlack, _ *fakeStore) {
 				fs.failures = map[string]int{"chat.postMessage": 1}
 			},
-			calls: []call{{ev: deploytest.EvInProgress, wantErr: true}, {ev: deploytest.EvInProgress}},
+			calls: []call{{ev: evInProgress, wantErr: true}, {ev: evInProgress}},
 			check: func(t *testing.T, fs *fakeSlack, _ *fakeStore) {
-				if len(fs.parents()) != 1 || len(fs.replies()) != 1 {
-					t.Errorf("parents = %d, replies = %d, want 1, 1", len(fs.parents()), len(fs.replies()))
+				assertCounts(t, fs, 1, 1, 0, 0)
+			},
+		},
+		"完了で、親を完了にし、親にチェックのスタンプを付ける": {
+			calls: []call{{ev: evStarted}, {ev: evInProgress}, {ev: evCompleted}},
+			check: func(t *testing.T, fs *fakeSlack, st *fakeStore) {
+				assertCounts(t, fs, 1, 3, 1, 1)
+				p := st.parents[testDeployment]
+				if p.Status != deploy.StatusCompleted || !p.CompletedAt.Equal(testTime) {
+					t.Errorf("parent = %+v", p)
+				}
+				if r := fs.reactions[0]; r.name != "white_check_mark" || r.ts != p.TS {
+					t.Errorf("reaction = %+v, want white_check_mark on %s", r, p.TS)
 				}
 			},
 		},
-		"完了で、親が緑になり、チェックのスタンプが付く": {
-			calls: []call{{ev: deploytest.EvStarted}, {ev: deploytest.EvInProgress}, {ev: deploytest.EvCompleted}},
-			check: func(t *testing.T, fs *fakeSlack, _ *fakeStore) {
-				p := fs.lastParent()
-				if got := slacktest.HeaderOf(p); got != ":white_check_mark: Deployed v3: prd-amber-api" {
-					t.Errorf("parent header = %q", got)
-				}
-				if slacktest.ColorOf(p) != slack.ColorSuccess {
-					t.Errorf("parent color = %q, want %q", slacktest.ColorOf(p), slack.ColorSuccess)
-				}
-				body := slacktest.BodyOf(p)
-				if !strings.Contains(body, "*Status*\nCompleted") || !strings.Contains(body, "*Completed at*\n2026-11-23 11:12:30 (JST)") {
-					t.Errorf("parent body:\n%s", body)
-				}
-				if len(fs.reactions) != 1 || fs.reactions[0].name != "white_check_mark" {
-					t.Errorf("reactions = %+v, want one white_check_mark", fs.reactions)
-				}
-				replies := fs.replies()
-				if got := slacktest.HeaderOf(replies[len(replies)-1]); got != ":white_check_mark: Deployment completed" {
-					t.Errorf("reply header = %q", got)
+		"ロールバックで、親をロールバック中にし、スタンプは付けない": {
+			calls: []call{{ev: evStarted}, {ev: evInProgress}, {ev: evRollback}},
+			check: func(t *testing.T, fs *fakeSlack, st *fakeStore) {
+				assertCounts(t, fs, 1, 3, 1, 0)
+				if got := st.parents[testDeployment].Status; got != deploy.StatusRollingBack {
+					t.Errorf("status = %q, want %q", got, deploy.StatusRollingBack)
 				}
 			},
 		},
-		"ロールバックで、親が赤になる": {
-			calls: []call{{ev: deploytest.EvStarted}, {ev: deploytest.EvInProgress}, {ev: deploytest.EvRollback}},
-			check: func(t *testing.T, fs *fakeSlack, _ *fakeStore) {
-				p := fs.lastParent()
-				if slacktest.ColorOf(p) != slack.ColorDanger || !strings.Contains(slacktest.BodyOf(p), "*Status*\nRolling back") {
-					t.Errorf("parent color = %q, body:\n%s", slacktest.ColorOf(p), slacktest.BodyOf(p))
+		"失敗で、親を失敗にし、x のスタンプを付ける": {
+			calls: []call{{ev: evStarted}, {ev: evRollback}, {ev: evFailed}},
+			check: func(t *testing.T, fs *fakeSlack, st *fakeStore) {
+				assertCounts(t, fs, 1, 3, 2, 1)
+				if got := st.parents[testDeployment].Status; got != deploy.StatusFailed {
+					t.Errorf("status = %q, want %q", got, deploy.StatusFailed)
 				}
-				if got := slacktest.HeaderOf(p); got != ":rewind: Rolling back v3: prd-amber-api" {
-					t.Errorf("parent header = %q", got)
-				}
-				replies := fs.replies()
-				last := replies[len(replies)-1]
-				if slacktest.HeaderOf(last) != ":rewind: Rollback started" || slacktest.ColorOf(last) != slack.ColorDanger {
-					t.Errorf("rollback reply header = %q, color = %q", slacktest.HeaderOf(last), slacktest.ColorOf(last))
-				}
-				if len(fs.reactions) != 0 {
-					t.Errorf("reactions = %+v, want none", fs.reactions)
-				}
-			},
-		},
-		"失敗で、親が赤になり、x のスタンプが付く": {
-			calls: []call{{ev: deploytest.EvStarted}, {ev: deploytest.EvRollback}, {ev: deploytest.EvFailed}},
-			check: func(t *testing.T, fs *fakeSlack, _ *fakeStore) {
-				p := fs.lastParent()
-				if slacktest.ColorOf(p) != slack.ColorDanger || !strings.Contains(slacktest.BodyOf(p), "*Status*\nFailed") {
-					t.Errorf("parent color = %q, body:\n%s", slacktest.ColorOf(p), slacktest.BodyOf(p))
-				}
-				if len(fs.reactions) != 1 || fs.reactions[0].name != "x" {
-					t.Errorf("reactions = %+v, want one x", fs.reactions)
+				if fs.reactions[0].name != "x" {
+					t.Errorf("reaction = %+v, want x", fs.reactions[0])
 				}
 			},
 		},
 		"遅れて届いたロールバックで、完了した親が戻らない": {
-			calls: []call{{ev: deploytest.EvStarted}, {ev: deploytest.EvCompleted}, {ev: deploytest.EvRollback}},
+			calls: []call{{ev: evStarted}, {ev: evCompleted}, {ev: evRollback}},
 			check: func(t *testing.T, _ *fakeSlack, st *fakeStore) {
-				if got := st.parents[deploytest.Deployment].Status; got != deploy.StatusCompleted {
+				if got := st.parents[testDeployment].Status; got != deploy.StatusCompleted {
 					t.Errorf("status = %q, want %q", got, deploy.StatusCompleted)
 				}
 			},
@@ -212,7 +132,7 @@ func TestHandle(t *testing.T) {
 				fs.failures = map[string]int{"chat.postMessage": 1}
 				fs.failWith = &slack.APIError{Method: "chat.postMessage", Code: "not_in_channel"}
 			},
-			calls: []call{{ev: deploytest.EvStarted, wantErr: true}},
+			calls: []call{{ev: evStarted, wantErr: true}},
 			check: func(t *testing.T, fs *fakeSlack, st *fakeStore) {
 				if len(fs.posts) != 0 || len(st.parents) != 0 {
 					t.Errorf("posts = %d, parents = %d, want 0, 0", len(fs.posts), len(st.parents))
@@ -221,9 +141,9 @@ func TestHandle(t *testing.T) {
 		},
 		"ほかの呼び出しが進めている手順は、投稿せずにエラーを返す": {
 			setup: func(_ *fakeSlack, st *fakeStore) {
-				st.steps["ev-started#reply"] = &fakeStep{leaseUntil: deploytest.Time.Add(time.Minute)}
+				st.steps["ev-started#reply"] = &fakeStep{leaseUntil: testTime.Add(time.Minute)}
 			},
-			calls: []call{{ev: deploytest.EvStarted, wantErr: true}},
+			calls: []call{{ev: evStarted, wantErr: true}},
 			check: func(t *testing.T, fs *fakeSlack, _ *fakeStore) {
 				if len(fs.replies()) != 0 {
 					t.Errorf("replies = %d, want 0", len(fs.replies()))
@@ -250,9 +170,9 @@ func TestHandle(t *testing.T) {
 			n := &Notifier{
 				Slack:   fs,
 				Store:   st,
-				Channel: deploytest.Channel,
-				Service: deploytest.Service,
-				Now:     func() time.Time { return deploytest.Time },
+				Channel: testChannel,
+				Service: testService,
+				Now:     func() time.Time { return testTime },
 			}
 
 			for i, c := range tt.calls {
@@ -268,10 +188,22 @@ func TestHandle(t *testing.T) {
 
 func TestHandleBusyIsErrBusy(t *testing.T) {
 	st := newFakeStore()
-	st.steps["parent#"+deploytest.Deployment] = &fakeStep{leaseUntil: deploytest.Time.Add(time.Minute)}
-	n := &Notifier{Slack: &fakeSlack{}, Store: st, Channel: deploytest.Channel, Service: deploytest.Service, Now: func() time.Time { return deploytest.Time }}
+	st.steps["parent#"+testDeployment] = &fakeStep{leaseUntil: testTime.Add(time.Minute)}
+	n := &Notifier{Slack: &fakeSlack{}, Store: st, Channel: testChannel, Service: testService, Now: func() time.Time { return testTime }}
 
-	if err := n.Handle(t.Context(), deploytest.EvInProgress); !errors.Is(err, ErrBusy) {
+	if err := n.Handle(t.Context(), evInProgress); !errors.Is(err, ErrBusy) {
 		t.Errorf("err = %v, want ErrBusy", err)
+	}
+}
+
+// assertCounts は、親の投稿、返信、書き換え、スタンプの数を確かめる
+func assertCounts(t *testing.T, fs *fakeSlack, parents, replies, updates, reactions int) {
+	t.Helper()
+	got := []int{len(fs.parents()), len(fs.replies()), len(fs.updates), len(fs.reactions)}
+	want := []int{parents, replies, updates, reactions}
+	for i, name := range []string{"parents", "replies", "updates", "reactions"} {
+		if got[i] != want[i] {
+			t.Errorf("%s = %d, want %d", name, got[i], want[i])
+		}
 	}
 }

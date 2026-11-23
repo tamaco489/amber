@@ -5,12 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-lambda-go/events"
-
 	"github.com/tamaco489/amber/backend/internal/deploy"
-	"github.com/tamaco489/amber/backend/internal/deploy/deploytest"
 	"github.com/tamaco489/amber/backend/internal/slack"
-	"github.com/tamaco489/amber/backend/internal/slack/slacktest"
 )
 
 func TestFormatJST(t *testing.T) {
@@ -43,85 +39,85 @@ func TestFormatJST(t *testing.T) {
 
 func TestReplyMessage(t *testing.T) {
 	tests := map[string]struct {
-		raw        events.CloudWatchEvent
+		ev         *deploy.Event
 		wantHeader string
 		wantColor  string
 		wantBody   []string
 		notInBody  []string
 	}{
 		"開始": {
-			raw:        deploytest.Started("1", true),
+			ev:         startedEvent(true),
 			wantHeader: ":rocket: Deploy started: v3",
 			wantColor:  slack.ColorInfo,
 			wantBody: []string{
 				"*Triggered by*\ntamaco489",
-				"*Deployment ID*\n" + deploytest.Deployment,
-				"*Task definition*\n" + deploytest.TaskDef,
-				"*Run*\n" + deploytest.RunURL,
+				"*Deployment ID*\n" + testDeployment,
+				"*Task definition*\n" + testTaskDef,
+				"*Run*\n" + testRunURL,
 			},
 			notInBody: []string{"Pushed"},
 		},
 		"同じタグの流し直し": {
-			raw:        deploytest.Started("1", false),
+			ev:         startedEvent(false),
 			wantHeader: ":rocket: Redeploy started: v3 (existing image)",
 			wantColor:  slack.ColorInfo,
 		},
 		"進行中": {
-			raw:        deploytest.EvInProgress,
+			ev:         ecsEvent(deploy.KindInProgress, "ECS deployment ecs-svc/1234567890 in progress."),
 			wantHeader: ":hourglass_flowing_sand: Deployment in progress",
 			wantColor:  slack.ColorWarning,
 			wantBody:   []string{"*Service*\nprd-amber-api", "*Reason*\nECS deployment", "2026-11-23 11:12:30 (JST)"},
 		},
 		"ロールバック": {
-			raw:        deploytest.EvRollback,
+			ev:         ecsEvent(deploy.KindRollback, "ECS deployment circuit breaker: rolling back to deploymentId ecs-svc/111."),
 			wantHeader: ":rewind: Rollback started",
 			wantColor:  slack.ColorDanger,
 		},
 		"完了": {
-			raw:        deploytest.EvCompleted,
+			ev:         ecsEvent(deploy.KindCompleted, "ECS deployment ecs-svc/1234567890 completed."),
 			wantHeader: ":white_check_mark: Deployment completed",
 			wantColor:  slack.ColorSuccess,
 		},
 		"失敗": {
-			raw:        deploytest.EvFailed,
+			ev:         ecsEvent(deploy.KindFailed, "ECS deployment circuit breaker: task failed to start."),
 			wantHeader: ":x: Deployment failed",
 			wantColor:  slack.ColorDanger,
 			wantBody:   []string{"task failed to start."},
 		},
 		"reason をエスケープする": {
-			raw:      deploytest.ECS("1", deploy.ECSFailed, "a <b> & c"),
+			ev:       ecsEvent(deploy.KindFailed, "a <b> & c"),
 			wantBody: []string{"a &lt;b&gt; &amp; c"},
 		},
 	}
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			msg := slack.ReplyMessage(deploytest.Parse(tt.raw), deploytest.Channel, deploytest.ParentTS)
+			msg := slack.ReplyMessage(tt.ev, testChannel, testParentTS)
 
-			if msg.ThreadTS != deploytest.ParentTS || msg.Channel != deploytest.Channel {
+			if msg.ThreadTS != testParentTS || msg.Channel != testChannel {
 				t.Errorf("thread_ts = %q, channel = %q", msg.ThreadTS, msg.Channel)
 			}
-			if tt.wantHeader != "" && slacktest.HeaderOf(msg) != tt.wantHeader {
-				t.Errorf("header = %q, want %q", slacktest.HeaderOf(msg), tt.wantHeader)
+			if tt.wantHeader != "" && headerOf(msg) != tt.wantHeader {
+				t.Errorf("header = %q, want %q", headerOf(msg), tt.wantHeader)
 			}
-			if tt.wantColor != "" && slacktest.ColorOf(msg) != tt.wantColor {
-				t.Errorf("color = %q, want %q", slacktest.ColorOf(msg), tt.wantColor)
+			if tt.wantColor != "" && colorOf(msg) != tt.wantColor {
+				t.Errorf("color = %q, want %q", colorOf(msg), tt.wantColor)
 			}
-			assertBody(t, slacktest.BodyOf(msg), tt.wantBody, tt.notInBody)
+			assertBody(t, bodyOf(msg), tt.wantBody, tt.notInBody)
 		})
 	}
 }
 
 func TestParentMessage(t *testing.T) {
 	base := deploy.Parent{
-		DeploymentID:   deploytest.Deployment,
-		TS:             deploytest.ParentTS,
-		Channel:        deploytest.Channel,
-		Service:        deploytest.Service,
+		DeploymentID:   testDeployment,
+		TS:             testParentTS,
+		Channel:        testChannel,
+		Service:        testService,
 		Version:        "v3",
 		Actor:          "tamaco489",
-		RunURL:         deploytest.RunURL,
-		TaskDefinition: deploytest.TaskDef,
+		RunURL:         testRunURL,
+		TaskDefinition: testTaskDef,
 	}
 
 	tests := map[string]struct {
@@ -138,12 +134,12 @@ func TestParentMessage(t *testing.T) {
 				"*Status*\nDeploying",
 				"*Triggered by*\ntamaco489",
 				"*Task definition*\nprd-amber-api:7",
-				"<" + deploytest.RunURL + "|GitHub Actions run>",
+				"<" + testRunURL + "|GitHub Actions run>",
 			},
 		},
 		"バージョンがまだ分からない": {
 			parent: func() deploy.Parent {
-				return deploy.Parent{Service: deploytest.Service, Status: deploy.StatusDeploying}
+				return deploy.Parent{Service: testService, Status: deploy.StatusDeploying}
 			},
 			wantHeader: ":rocket: Deploying: prd-amber-api",
 			wantBody:   []string{"*Triggered by*\nnone", "GitHub Actions run: none"},
@@ -152,7 +148,7 @@ func TestParentMessage(t *testing.T) {
 			parent: func() deploy.Parent {
 				p := base
 				p.Status = deploy.StatusCompleted
-				p.CompletedAt = deploytest.Time
+				p.CompletedAt = testTime
 				return p
 			},
 			wantHeader: ":white_check_mark: Deployed v3: prd-amber-api",
@@ -178,13 +174,13 @@ func TestParentMessage(t *testing.T) {
 			p := tt.parent()
 			msg := slack.ParentMessage(&p)
 
-			if got := slacktest.HeaderOf(msg); got != tt.wantHeader {
+			if got := headerOf(msg); got != tt.wantHeader {
 				t.Errorf("header = %q, want %q", got, tt.wantHeader)
 			}
-			if tt.wantColor != "" && slacktest.ColorOf(msg) != tt.wantColor {
-				t.Errorf("color = %q, want %q", slacktest.ColorOf(msg), tt.wantColor)
+			if tt.wantColor != "" && colorOf(msg) != tt.wantColor {
+				t.Errorf("color = %q, want %q", colorOf(msg), tt.wantColor)
 			}
-			assertBody(t, slacktest.BodyOf(msg), tt.wantBody, nil)
+			assertBody(t, bodyOf(msg), tt.wantBody, nil)
 		})
 	}
 }

@@ -5,8 +5,6 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
-
-	"github.com/tamaco489/amber/backend/internal/deploy/deploytest"
 )
 
 func TestStoreClaim(t *testing.T) {
@@ -39,7 +37,7 @@ func TestStoreClaim(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			db := &fakeAPI{err: tt.err}
-			got, err := New(db, "table").Claim(t.Context(), "ev#reply", deploytest.Time)
+			got, err := New(db, "table").Claim(t.Context(), "ev#reply", testTime)
 
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("err = %v, wantErr %v", err, tt.wantErr)

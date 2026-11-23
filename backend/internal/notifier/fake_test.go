@@ -95,18 +95,6 @@ func (f *fakeSlack) replies() []slack.Message {
 	return out
 }
 
-// lastParent は、親の今の見た目 (最後の chat.update、無ければ最初の投稿)
-func (f *fakeSlack) lastParent() slack.Message {
-	if len(f.updates) > 0 {
-		return f.updates[len(f.updates)-1]
-	}
-	ps := f.parents()
-	if len(ps) == 0 {
-		return slack.Message{}
-	}
-	return ps[0]
-}
-
 // ================================================================================
 // DynamoDB の差し替え (dynamodb.Store と同じ条件で動く)
 // ================================================================================

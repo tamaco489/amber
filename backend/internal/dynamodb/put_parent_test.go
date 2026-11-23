@@ -8,7 +8,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 
 	"github.com/tamaco489/amber/backend/internal/deploy"
-	"github.com/tamaco489/amber/backend/internal/deploy/deploytest"
 )
 
 func TestStorePutParent(t *testing.T) {
@@ -37,8 +36,8 @@ func TestStorePutParent(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			db := &fakeAPI{err: tt.err}
-			p := &deploy.Parent{DeploymentID: deploytest.Deployment, Rev: tt.rev}
-			err := New(db, "table").PutParent(t.Context(), p, deploytest.Time)
+			p := &deploy.Parent{DeploymentID: testDeployment, Rev: tt.rev}
+			err := New(db, "table").PutParent(t.Context(), p, testTime)
 
 			if !errors.Is(err, tt.wantErr) {
 				t.Fatalf("err = %v, want %v", err, tt.wantErr)
