@@ -48,13 +48,8 @@ output "ecs_service_name" {
   value       = var.enable_runtime ? module.ecs[0].service_name : null
 }
 
-output "notification_connection_name" {
-  description = "Name of the EventBridge connection for Slack. Set the bot token to it with aws events update-connection."
-  value       = module.notification.connection_name
-}
-
 output "notification_dead_letter_queue_url" {
-  description = "URL of the SQS queue that keeps the notifications EventBridge failed to deliver to Slack."
+  description = "URL of the SQS queue that keeps the failed notifications (events not delivered to the notification Lambda, and invocations that failed after its retries)."
   value       = module.notification.dead_letter_queue_url
 }
 

@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// Slack の通知の色の帯 (Slack のブランドカラー。infra の modules/notification の slack_colors と同じ)
+// Slack の通知の色の帯 (Slack のブランドカラー)
 const (
 	ColorInfo    = "#36C5F0"
 	ColorSuccess = "#2EB67D"

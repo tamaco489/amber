@@ -16,7 +16,7 @@ resource "aws_cloudwatch_log_group" "notifier" {
 
 # 通知の Lambda の実行ロール
 #   - 信頼条件: Lambda から。ロールを関数に付けられるのは、このアカウントで iam:PassRole を持つものだけ
-#   - 権限: 状態のテーブルの読み書き、ボットトークンの読み取り、ログの書き込み、失敗したときのデッドレターキューへの送信、ECS のサービスデプロイの一覧
+#   - 権限: 状態のテーブルの読み書き、ボットトークンの読み取り、ログの書き込み、失敗したときの DLQ への送信、ECS のサービスデプロイの一覧
 resource "aws_iam_role" "notifier" {
   name               = "${local.name_prefix}-notification-lambda"
   assume_role_policy = data.aws_iam_policy_document.notifier_trust.json
@@ -70,7 +70,7 @@ data "aws_iam_policy_document" "notifier" {
     resources = ["${aws_cloudwatch_log_group.notifier.arn}:*"]
   }
 
-  # 非同期の呼び出しが失敗したときの送り先 (デッドレターキュー) への送信
+  # 非同期の呼び出しが失敗したときの送り先 (DLQ) への送信
   #   - 同じアカウントのため、キューのポリシーに許可がなくても、このロールの許可だけで送れる
   statement {
     sid       = "SendToDeadLetterQueue"
@@ -152,9 +152,9 @@ resource "aws_lambda_function" "notifier" {
 
 # 非同期の呼び出し (EventBridge から) の再試行と、失敗したときの送り先
 #   - 関数がエラーを返したとき (Slack が ok: false を返したときを含む) は、Lambda が最大 2 回まで再試行する
-#     EventBridge は、Lambda が非同期の呼び出しを受け付けた時点で成功とみなすため、EventBridge 側の再試行とデッドレターキューには乗らない
+#     EventBridge は、Lambda が非同期の呼び出しを受け付けた時点で成功とみなすため、EventBridge 側の再試行と DLQ には乗らない
 #   - 1 時間より古いイベントは捨てる (ルールの再試行と同じ)
-#   - 再試行しても失敗したものは、ルールと同じデッドレターキューに送る (送信の許可は実行ロールにある)
+#   - 再試行しても失敗したものは、ルールと同じ DLQ に送る (送信の許可は実行ロールにある)
 # DOC: https://docs.aws.amazon.com/lambda/latest/dg/invocation-async-error-handling.html
 # DOC: https://docs.aws.amazon.com/lambda/latest/dg/invocation-async-retain-records.html
 resource "aws_lambda_function_event_invoke_config" "notifier" {
