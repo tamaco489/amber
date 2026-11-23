@@ -7,6 +7,7 @@ linters:
     - errorlint
     - gosec
     - misspell
+    - modernize
     - noctx
     - revive
 
@@ -14,3 +15,8 @@ formatters:
   enable:
     - gofmt
     - goimports
+  settings:
+    goimports:
+      # このリポジトリのパッケージを、外部のパッケージと別のまとまりにする
+      local-prefixes:
+        - github.com/tamaco489/amber

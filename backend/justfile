@@ -15,12 +15,16 @@ fmt:
 lint:
     golangci-lint run
 
+# gopls の解析を流す (golangci-lint に無い解析を拾う。処理は scripts/gopls-check.sh)
+gopls:
+    scripts/gopls-check.sh
+
 # テストを実行する
 test:
     go test -race ./...
 
-# lint とテストをまとめて実行する
-check: lint test
+# lint、gopls の解析、テストをまとめて実行する
+check: lint gopls test
 
 
 # ==========================================================================================
