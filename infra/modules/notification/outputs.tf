@@ -8,13 +8,8 @@ output "deploy_event_detail_type" {
   value       = local.deploy_event_detail_type
 }
 
-output "connection_name" {
-  description = "Name of the EventBridge connection. Set the Slack bot token to it with aws events update-connection."
-  value       = aws_cloudwatch_event_connection.slack.name
-}
-
 output "dead_letter_queue_url" {
-  description = "URL of the SQS queue that keeps the notifications EventBridge failed to deliver."
+  description = "URL of the SQS queue that keeps the notifications that failed: events EventBridge failed to deliver to the Lambda, and invocations that failed after the Lambda retries."
   value       = aws_sqs_queue.dead_letter.url
 }
 

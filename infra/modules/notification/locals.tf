@@ -19,21 +19,13 @@ locals {
   deploy_event_source      = "amber.cd-backend"
   deploy_event_detail_type = "Deployment Started"
 
-  # 通知のルール (ロールの信頼条件と、デッドレターキューへの送信の許可に使う)
+  # 通知のルール (デッドレターキューへの送信の許可に使う)
   rule_arns = concat(
     [for rule in aws_cloudwatch_event_rule.ecs_deployment : rule.arn],
     [aws_cloudwatch_event_rule.deploy_started.arn],
   )
 
-  # Slack の通知の色の帯 (Slack のブランドカラー)
-  slack_colors = {
-    info    = "#36C5F0"
-    success = "#2EB67D"
-    warning = "#ECB22E"
-    danger  = "#E01E5A"
-  }
-
-  # 届けられなかったときの再試行
+  # 届けられなかったときの再試行 (ルールから Lambda へ。古さの上限は Lambda の非同期の呼び出しの設定でも使う)
   #   - 1 時間より古い通知は、届いても役に立たないため捨てる (デッドレターキューに入る)
   max_event_age_seconds = 60 * 60 # 1 時間
   max_retry_attempts    = 10
