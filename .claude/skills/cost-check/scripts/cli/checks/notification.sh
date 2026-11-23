@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 通知: EventBridge のルール・接続・API 送信先、デッドレターキュー、接続のシークレット、
-#       通知の Lambda の状態のテーブルとボットトークンのパラメータ (置いておくだけなら無料)
+#       通知の Lambda の関数と状態のテーブルとボットトークンのパラメータ (置いておくだけなら無料)
 set -uo pipefail
 source "$(dirname "$0")/../lib.sh"
 require_amber_account
@@ -34,6 +34,10 @@ for table in $(aws dynamodb list-tables --output json 2>/dev/null | jq -r '.Tabl
     query '{name: .Table.TableName, billing: .Table.BillingModeSummary.BillingMode}' \
         aws dynamodb describe-table --table-name "$table"
 done
+
+section "Lambda: prd-amber を含む関数 (通知の関数 1 つだけ。provided.al2023、arm64)"
+query '[.Functions[] | select(.FunctionName | contains("prd-amber")) | {name: .FunctionName, runtime: .Runtime, architectures: .Architectures}] | sort_by(.name)' \
+    aws lambda list-functions
 
 section "SSM: /prd-amber/ のパラメータ (ボットトークン 1 つだけ。標準)"
 query '[.Parameters[] | {name: .Name, type: .Type, tier: .Tier}] | sort_by(.name)' \
