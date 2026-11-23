@@ -17,7 +17,7 @@ type look struct {
 
 // 状態ごとの、親の帯の色と見出し
 var parentLooks = map[deploy.Status]look{
-	deploy.StatusDeploying:   {color: ColorInfo, emoji: ":rocket:", verb: "Deploying", status: "Deploying"},
+	deploy.StatusDeploying:   {color: ColorNeutral, emoji: ":rocket:", verb: "Deploying", status: "Deploying"},
 	deploy.StatusRollingBack: {color: ColorDanger, emoji: ":rewind:", verb: "Rolling back", status: "Rolling back"},
 	deploy.StatusCompleted:   {color: ColorSuccess, emoji: ":white_check_mark:", verb: "Deployed", status: "Completed"},
 	deploy.StatusFailed:      {color: ColorDanger, emoji: ":x:", verb: "Failed to deploy", status: "Failed"},

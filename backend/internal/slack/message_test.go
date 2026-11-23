@@ -51,10 +51,10 @@ func TestReplyMessage(t *testing.T) {
 			wantBody: []string{
 				"*Triggered by*\ntamaco489",
 				"*Deployment ID*\n" + testDeployment,
-				"*Task definition*\n" + testTaskDef,
+				"*Task definition*\nprd-amber-api:7",
 				"*Run*\n" + testRunURL,
 			},
-			notInBody: []string{"Pushed"},
+			notInBody: []string{"Pushed", "arn:aws:ecs"},
 		},
 		"同じタグの流し直し": {
 			ev:         startedEvent(false),
@@ -114,7 +114,7 @@ func TestParentMessage(t *testing.T) {
 		"デプロイ中": {
 			parent:     parentWith(deploy.StatusDeploying),
 			wantHeader: ":rocket: Deploying v3: prd-amber-api",
-			wantColor:  slack.ColorInfo,
+			wantColor:  slack.ColorNeutral,
 			wantBody: []string{
 				"*Status*\nDeploying",
 				"*Triggered by*\ntamaco489",

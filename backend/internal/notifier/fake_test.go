@@ -8,6 +8,7 @@ import (
 
 	"github.com/tamaco489/amber/backend/internal/deploy"
 	"github.com/tamaco489/amber/backend/internal/dynamodb"
+	"github.com/tamaco489/amber/backend/internal/ecs"
 	"github.com/tamaco489/amber/backend/internal/slack"
 )
 
@@ -174,16 +175,20 @@ func (s *fakeStore) PutParent(_ context.Context, p *deploy.Parent, _ time.Time) 
 // ================================================================================
 
 type fakeECS struct {
-	mu    sync.Mutex
-	url   string // DeploymentURL が返す URL
-	err   error  // DeploymentURL が返すエラー
-	calls int    // DeploymentURL を呼んだ回数
+	mu       sync.Mutex
+	url      string // DeploymentURL が返す URL
+	err      error  // DeploymentURL が返すエラー
+	notFound int    // 先頭の n 回は ecs.ErrNotFound を返す (サービスデプロイがまだ出ていない)
+	calls    int    // DeploymentURL を呼んだ回数
 }
 
 func (f *fakeECS) DeploymentURL(_ context.Context, _ *deploy.Event) (string, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.calls++
+	if f.calls <= f.notFound {
+		return "", ecs.ErrNotFound
+	}
 	if f.err != nil {
 		return "", f.err
 	}

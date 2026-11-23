@@ -27,7 +27,7 @@ func startedReply(ev *deploy.Event, channel, threadTS string) Message {
 		Block{Type: "section", Fields: []Text{field("Triggered by", ev.Actor)}},
 		Block{Type: "section", Fields: []Text{
 			field("Deployment ID", ev.DeploymentID),
-			field("Task definition", ev.TaskDefinition),
+			field("Task definition", shortTaskDefinition(ev.TaskDefinition)),
 		}},
 		Block{Type: "section", Text: &Text{Type: "mrkdwn", Text: "*Run*\n" + escape(ev.RunURL)}},
 	)

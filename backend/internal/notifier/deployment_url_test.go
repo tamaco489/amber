@@ -36,6 +36,17 @@ func TestHandleECSDeploymentURL(t *testing.T) {
 			wantUpdates: 1,
 			wantURL:     testECSURL,
 		},
+		"見つからない間は、間を空けて引き直す": {
+			ecs:       &fakeECS{url: testECSURL, notFound: 2},
+			events:    []events.CloudWatchEvent{evInProgress},
+			wantCalls: 3,
+			wantURL:   testECSURL,
+		},
+		"見つからないまま、決めた回数で諦め、通知は続ける": {
+			ecs:       &fakeECS{url: testECSURL, notFound: 10},
+			events:    []events.CloudWatchEvent{evInProgress},
+			wantCalls: deploymentURLAttempts,
+		},
 		"引けなくても、通知は続け、URL は空のまま": {
 			ecs:       &fakeECS{err: errors.New("AccessDeniedException")},
 			events:    []events.CloudWatchEvent{evStarted, evInProgress},

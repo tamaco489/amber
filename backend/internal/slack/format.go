@@ -6,7 +6,9 @@ import (
 )
 
 // Slack の通知の色の帯 (Slack のブランドカラー)
+//   - ColorNeutral は、デプロイ中の親の投稿に使う。結果 (緑か赤) が出る前であることを、返信の色と分けて示す
 const (
+	ColorNeutral = "#1D1C1D"
 	ColorInfo    = "#36C5F0"
 	ColorSuccess = "#2EB67D"
 	ColorWarning = "#ECB22E"
