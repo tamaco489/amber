@@ -23,7 +23,6 @@ func startedTitle(ev *deploy.Event) string {
 func startedReply(ev *deploy.Event, channel, threadTS string) Message {
 	title := startedTitle(ev)
 	return message(channel, threadTS, title, ColorInfo,
-		header(title),
 		Block{Type: "section", Fields: []Text{field("Triggered by", ev.Actor)}},
 		Block{Type: "section", Fields: []Text{
 			field("Deployment ID", ev.DeploymentID),
@@ -53,7 +52,6 @@ var ecsLooks = map[deploy.Kind]replyLook{
 func ecsReply(ev *deploy.Event, channel, threadTS string) Message {
 	l := ecsLooks[ev.Kind]
 	return message(channel, threadTS, l.title+": "+ev.Service, l.color,
-		header(l.title),
 		Block{Type: "section", Fields: []Text{
 			field("Service", ev.Service),
 			field("Deployment ID", ev.DeploymentID),

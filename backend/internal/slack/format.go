@@ -43,15 +43,16 @@ func field(name, value string) Text {
 	return Text{Type: "mrkdwn", Text: "*" + name + "*\n" + escape(value)}
 }
 
-func header(text string) Block {
-	return Block{Type: "header", Text: &Text{Type: "plain_text", Text: text, Emoji: true}}
-}
-
-func message(channel, threadTS, text, color string, blocks ...Block) Message {
+// message は、タイトルと色の帯を持つメッセージを組み立てる
+//   - タイトルは text だけに太字で入れ、帯の中には繰り返さない (同じ文が 2 行続いて出ないようにするため)
+//   - text は通知のポップアップにも使われる
+//
+// DOC: https://docs.slack.dev/reference/methods/chat.postMessage#text_usage
+func message(channel, threadTS, title, color string, blocks ...Block) Message {
 	return Message{
 		Channel:     channel,
 		ThreadTS:    threadTS,
-		Text:        text,
+		Text:        "*" + title + "*",
 		Attachments: []Attachment{{Color: color, Blocks: blocks}},
 	}
 }

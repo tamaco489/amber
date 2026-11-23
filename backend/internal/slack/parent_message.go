@@ -83,7 +83,6 @@ func ParentMessage(p *deploy.Parent) Message {
 	}
 
 	msg := message(p.Channel, "", title, l.color,
-		header(title),
 		Block{Type: "section", Fields: parentFields(l, p)},
 		Block{Type: "section", Text: &Text{Type: "mrkdwn", Text: strings.Join(links, "   ")}},
 	)

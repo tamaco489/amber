@@ -6,12 +6,9 @@ import (
 	"github.com/tamaco489/amber/backend/internal/slack"
 )
 
-// headerOf は、先頭のブロック (見出し) の文
+// headerOf は、タイトル (text の太字の中身)
 func headerOf(m slack.Message) string {
-	if len(m.Attachments) == 0 || len(m.Attachments[0].Blocks) == 0 || m.Attachments[0].Blocks[0].Text == nil {
-		return ""
-	}
-	return m.Attachments[0].Blocks[0].Text.Text
+	return strings.Trim(m.Text, "*")
 }
 
 // colorOf は、帯の色
