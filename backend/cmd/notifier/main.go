@@ -1,6 +1,7 @@
 // notifier は、デプロイの EventBridge のイベントを受け、デプロイごとに 1 つの Slack のスレッドにまとめる Lambda
 //   - 処理の流れは internal/notifier、テーブルのアイテムの置き方は internal/dynamodb にある
 //   - Slack のボットトークンは、コールドスタートのときに 1 回だけ SSM パラメータストアから読む
+//   - ECS のデプロイのページの URL は、ECS のイベントごとに ListServiceDeployments で引く (実行ロールに ecs:ListServiceDeployments が要る)
 //
 // 環境変数:
 //   - TABLE_NAME: 親の投稿と手順の記録を残す DynamoDB のテーブル (パーティションキーは文字列の pk、TTL は expires_at)
@@ -20,9 +21,11 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	ddb "github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	awsecs "github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 
 	"github.com/tamaco489/amber/backend/internal/dynamodb"
+	"github.com/tamaco489/amber/backend/internal/ecs"
 	"github.com/tamaco489/amber/backend/internal/notifier"
 	"github.com/tamaco489/amber/backend/internal/slack"
 )
@@ -92,6 +95,7 @@ func setup(ctx context.Context) (*notifier.Notifier, error) {
 	return &notifier.Notifier{
 		Slack:   slack.NewClient(aws.ToString(out.Parameter.Value)),
 		Store:   dynamodb.New(ddb.NewFromConfig(cfg), e.tableName),
+		ECS:     ecs.New(awsecs.NewFromConfig(cfg)),
 		Channel: e.channelID,
 		Service: e.serviceName,
 	}, nil

@@ -27,6 +27,7 @@ func parentToItem(p *deploy.Parent, now time.Time) map[string]types.AttributeVal
 	str("actor", p.Actor)
 	str("run_url", p.RunURL)
 	str("task_definition", p.TaskDefinition)
+	str("ecs_deployment_url", p.ECSDeploymentURL)
 	if !p.CompletedAt.IsZero() {
 		str("completed_at", p.CompletedAt.UTC().Format(time.RFC3339))
 	}
@@ -46,15 +47,16 @@ func parentFromItem(deploymentID string, item map[string]types.AttributeValue) (
 	}
 
 	p := &deploy.Parent{
-		DeploymentID:   deploymentID,
-		TS:             str("ts"),
-		Channel:        str("channel"),
-		Service:        str("service"),
-		Status:         deploy.Status(str("status")),
-		Version:        str("version"),
-		Actor:          str("actor"),
-		RunURL:         str("run_url"),
-		TaskDefinition: str("task_definition"),
+		DeploymentID:     deploymentID,
+		TS:               str("ts"),
+		Channel:          str("channel"),
+		Service:          str("service"),
+		Status:           deploy.Status(str("status")),
+		Version:          str("version"),
+		Actor:            str("actor"),
+		RunURL:           str("run_url"),
+		TaskDefinition:   str("task_definition"),
+		ECSDeploymentURL: str("ecs_deployment_url"),
 	}
 
 	completedAt, err := parseTime(str("completed_at"))

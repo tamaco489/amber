@@ -5,25 +5,28 @@ import "time"
 // Parent は、親の投稿と、それを組み立て直すのに要る値
 //   - chat.update は本文をまるごと置き換えるため、書き換えるたびに、ここから組み立て直す
 type Parent struct {
-	DeploymentID   string    // デプロイ ID
-	TS             string    // 親の投稿の ts
-	Channel        string    // 投稿したチャンネルの ID
-	Service        string    // サービスの名前
-	Status         Status    // デプロイの今の状態
-	Version        string    // バージョン (開始が届くまでは空)
-	Actor          string    // 起動した人 (同上)
-	RunURL         string    // GitHub Actions の実行の URL (同上)
-	TaskDefinition string    // タスク定義の ARN (同上)
-	CompletedAt    time.Time // 完了した時刻
-	Rev            int       // 書き換えるたびに 1 ずつ増やす (楽観ロック)
+	DeploymentID     string    // デプロイ ID
+	TS               string    // 親の投稿の ts
+	Channel          string    // 投稿したチャンネルの ID
+	Service          string    // サービスの名前
+	Status           Status    // デプロイの今の状態
+	Version          string    // バージョン (開始が届くまでは空)
+	Actor            string    // 起動した人 (同上)
+	RunURL           string    // GitHub Actions の実行の URL (同上)
+	TaskDefinition   string    // タスク定義の ARN (同上)
+	ECSDeploymentURL string    // ECS のデプロイのページの URL (ECS のイベントで引けるまでは空)
+	CompletedAt      time.Time // 完了した時刻
+	Rev              int       // 書き換えるたびに 1 ずつ増やす (楽観ロック)
 }
 
 // Apply は、イベントを親の状態に反映する。変わったかどうかを返す
+//   - どのイベントでも: ECS のデプロイのページの URL を、引けていれば埋める
 //   - 開始: バージョン、起動した人、リンク、タスク定義を埋める
 //   - ロールバック・完了・失敗: 状態を進める (戻す方向には変えない)
-//   - ロールバックでない進行中: 変えない
+//   - ロールバックでない進行中: 状態は変えない
 func (p *Parent) Apply(ev *Event) bool {
 	changed := setString(&p.Service, ev.Service)
+	changed = setString(&p.ECSDeploymentURL, ev.ECSDeploymentURL) || changed
 
 	switch ev.Kind {
 	case KindStarted:

@@ -61,6 +61,7 @@ const (
 	testParentTS   = "1700000000.000001"
 	testTaskDef    = "arn:aws:ecs:ap-northeast-1:111122223333:task-definition/prd-amber-api:7"
 	testRunURL     = "https://github.com/tamaco489/amber/actions/runs/1"
+	testECSURL     = "https://ap-northeast-1.console.aws.amazon.com/ecs/v2/clusters/prd-amber/services/prd-amber-api/deployments/abc?region=ap-northeast-1"
 )
 
 // testTime は、テストの時刻 (JST では 2026-11-23 11:12:30)
@@ -97,15 +98,16 @@ func ecsEvent(kind deploy.Kind, reason string) *deploy.Event {
 // parentWith は、値の埋まった親の投稿を、状態 status で作る
 func parentWith(status deploy.Status) *deploy.Parent {
 	return &deploy.Parent{
-		DeploymentID:   testDeployment,
-		TS:             testParentTS,
-		Channel:        testChannel,
-		Service:        testService,
-		Status:         status,
-		Version:        "v3",
-		Actor:          "tamaco489",
-		RunURL:         testRunURL,
-		TaskDefinition: testTaskDef,
+		DeploymentID:     testDeployment,
+		TS:               testParentTS,
+		Channel:          testChannel,
+		Service:          testService,
+		Status:           status,
+		Version:          "v3",
+		Actor:            "tamaco489",
+		RunURL:           testRunURL,
+		TaskDefinition:   testTaskDef,
+		ECSDeploymentURL: testECSURL,
 	}
 }
 

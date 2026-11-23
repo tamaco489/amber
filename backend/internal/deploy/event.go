@@ -13,17 +13,19 @@ var ErrUnsupported = errors.New("unsupported event")
 
 // Event は、届いたイベントを、通知に使う形に直したもの
 type Event struct {
-	ID             string    // EventBridge のイベントの ID (再試行で同じイベントが届いたことを見分ける)
-	Kind           Kind      // 通知の種類
-	DeploymentID   string    // デプロイ ID (ecs-svc/...)
-	Service        string    // サービスの名前
-	Time           time.Time // イベントの時刻
-	Reason         string    // ECS のイベントだけが持つ
-	Version        string    // Deployment Started だけが持つ (以下も同じ)
-	Actor          string    // 起動した人
-	RunURL         string    // GitHub Actions の実行の URL
-	TaskDefinition string    // タスク定義の ARN
-	Pushed         bool      // この実行でイメージを push したか (false なら、同じタグの流し直し)
+	ID               string    // EventBridge のイベントの ID (再試行で同じイベントが届いたことを見分ける)
+	Kind             Kind      // 通知の種類
+	DeploymentID     string    // デプロイ ID (ecs-svc/...)
+	Service          string    // サービスの名前
+	Time             time.Time // イベントの時刻
+	Reason           string    // ECS のイベントだけが持つ (ServiceARN も同じ)
+	ServiceARN       string    // サービスの ARN (resources[0])
+	ECSDeploymentURL string    // ECS のデプロイのページの URL (ECS のイベントで、notifier が ECS の API で引いて入れる。引けなければ空)
+	Version          string    // Deployment Started だけが持つ (以下も同じ)
+	Actor            string    // 起動した人
+	RunURL           string    // GitHub Actions の実行の URL
+	TaskDefinition   string    // タスク定義の ARN
+	Pushed           bool      // この実行でイメージを push したか (false なら、同じタグの流し直し)
 }
 
 // ParseEvent は、EventBridge のイベントを Event に直す

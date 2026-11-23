@@ -15,6 +15,7 @@ import (
 type Notifier struct {
 	Slack   Slack            // Slack の Web API
 	Store   Store            // 親の投稿と手順の記録を残す場所
+	ECS     ECS              // ECS の API (デプロイのページの URL を引く)
 	Channel string           // 投稿するチャンネルの ID
 	Service string           // Deployment Started (サービスの名前を持たない) で使う、サービスの名前
 	Now     func() time.Time // 今の時刻 (テストで差し替える。nil なら time.Now)
@@ -42,6 +43,9 @@ func (n *Notifier) Handle(ctx context.Context, raw events.CloudWatchEvent) error
 
 	log := slog.With("id", ev.ID, "kind", ev.Kind.String(), "deployment_id", ev.DeploymentID)
 	log.InfoContext(ctx, "handle event")
+
+	// 0. ECS のデプロイのページの URL (引けなくても通知は続ける)
+	n.lookupDeploymentURL(ctx, ev)
 
 	// 1. 親の投稿
 	parent, created, err := n.ensureParent(ctx, ev)

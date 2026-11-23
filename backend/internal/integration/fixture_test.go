@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 
 	"github.com/tamaco489/amber/backend/internal/deploy"
 )
@@ -18,7 +20,14 @@ const (
 	testTaskDef    = "arn:aws:ecs:ap-northeast-1:111122223333:task-definition/prd-amber-api:7"
 	testRunURL     = "https://github.com/tamaco489/amber/actions/runs/1"
 	testParentTS   = "1700000000.000001"
+	testECSURL     = "https://ap-northeast-1.console.aws.amazon.com/ecs/v2/clusters/prd-amber/services/prd-amber-api/deployments/abc?region=ap-northeast-1"
 )
+
+// testServiceDeployment は、testDeployment のサービスデプロイ (対象のサービスリビジョンの ID が、デプロイ ID の数字と同じ)
+var testServiceDeployment = types.ServiceDeploymentBrief{
+	ServiceDeploymentArn:     aws.String("arn:aws:ecs:ap-northeast-1:111122223333:service-deployment/prd-amber/prd-amber-api/abc"),
+	TargetServiceRevisionArn: aws.String("arn:aws:ecs:ap-northeast-1:111122223333:service-revision/prd-amber/prd-amber-api/1234567890"),
+}
 
 // testTime は、テストのイベントの時刻 (JST では 2026-11-23 11:12:30)
 var testTime = time.Date(2026, 11, 23, 2, 12, 30, 0, time.UTC)
