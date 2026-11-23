@@ -23,22 +23,22 @@ description: amber の AWS のリソースのうち、置いておくだけで�
 
 ## ファイル
 
-| ファイル                             | 役割                                                                                 |
-| ------------------------------------ | ------------------------------------------------------------------------------------ |
-| `SKILL.md`                           | メインのセッションの手順と、判断の表                                                 |
-| `report-template.md`                 | レポートの雛形。エージェントが埋める                                                 |
-| `scripts/cli/check.sh`               | CLI での確認の入り口。`checks/` を順に流す (読み取りだけ)                            |
-| `scripts/cli/lib.sh`                 | 共通の設定 (プロファイル、リージョン、JST) と関数 (失敗の検出、認証の確認)           |
-| `scripts/cli/checks/terraform.sh`    | `enable_runtime`、state のロック、`terraform plan`、state に残る時間課金のモジュール |
-| `scripts/cli/checks/compute.sh`      | 時間課金: ECS、ELB、VPC エンドポイント、NAT、EIP、EC2、EBS、ENI、オートスケーリング  |
-| `scripts/cli/checks/monitoring.sh`   | 置いておくと課金: CloudWatch アラーム、ロググループ                                  |
-| `scripts/cli/checks/dns.sh`          | Route 53 のレコード、ACM の証明書                                                    |
-| `scripts/cli/checks/notification.sh` | 通知: EventBridge、デッドレターキュー、接続のシークレット                            |
-| `scripts/cli/checks/storage.sh`      | ほぼ \$0: ECR、タスク定義、tfstate のバケット                                        |
-| `scripts/mcp/check.py`               | AWS MCP の `run_script` にそのまま渡す、固定の確認のコード                           |
-| `scripts/verify/verify.sh`           | メインのセッションの検証 (記入漏れ、時刻、CLI の確認の流し直しと突き合わせ)          |
-| `.shellcheckrc`                      | `checks/` が `lib.sh` を読み込むのを、shellcheck にたどらせる設定                    |
-| `.claude/agents/cost-auditor.md`     | 調査するエージェントの定義                                                           |
+| ファイル                             | 役割                                                                                                  |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| `SKILL.md`                           | メインのセッションの手順と、判断の表                                                                  |
+| `report-template.md`                 | レポートの雛形。エージェントが埋める                                                                  |
+| `scripts/cli/check.sh`               | CLI での確認の入り口。`checks/` を順に流す (読み取りだけ)                                             |
+| `scripts/cli/lib.sh`                 | 共通の設定 (プロファイル、リージョン、JST) と関数 (失敗の検出、認証の確認)                            |
+| `scripts/cli/checks/terraform.sh`    | `enable_runtime`、state のロック、`terraform plan`、state に残る時間課金のモジュール                  |
+| `scripts/cli/checks/compute.sh`      | 時間課金: ECS、ELB、VPC エンドポイント、NAT、EIP、EC2、EBS、ENI、オートスケーリング                   |
+| `scripts/cli/checks/monitoring.sh`   | 置いておくと課金: CloudWatch アラーム、ロググループ (通知の Lambda のものは分けて出す)                |
+| `scripts/cli/checks/dns.sh`          | Route 53 のレコード、ACM の証明書                                                                     |
+| `scripts/cli/checks/notification.sh` | 通知: EventBridge、デッドレターキュー、接続のシークレット、状態のテーブル、ボットトークンのパラメータ |
+| `scripts/cli/checks/storage.sh`      | ほぼ \$0: ECR、タスク定義、tfstate のバケット                                                         |
+| `scripts/mcp/check.py`               | AWS MCP の `run_script` にそのまま渡す、固定の確認のコード                                            |
+| `scripts/verify/verify.sh`           | メインのセッションの検証 (記入漏れ、時刻、CLI の確認の流し直しと突き合わせ)                           |
+| `.shellcheckrc`                      | `checks/` が `lib.sh` を読み込むのを、shellcheck にたどらせる設定                                     |
+| `.claude/agents/cost-auditor.md`     | 調査するエージェントの定義                                                                            |
 
 ## 冪等性 (何回流しても同じ結果になるための決まり)
 
@@ -93,14 +93,17 @@ description: amber の AWS のリソースのうち、置いておくだけで�
 |                                | NAT、EC2、ENI (amber の VPC)、EIP、EBS (タグ `project=amber`)                   | ない                                                                                                                                                                         |
 |                                | オートスケーリングの対象                                                        | `prd-amber` を含むものがない                                                                                                                                                 |
 | 置いておくと課金 (残ったら NG) | CloudWatch アラーム (月 \$0.10/個)                                              | `prd-amber` を含むものがない (`TargetTracking-service/prd-amber/...` も含む)                                                                                                 |
-|                                | ロググループ                                                                    | `prd-amber` を含むものがない                                                                                                                                                 |
+|                                | ロググループ                                                                    | `prd-amber` を含むものがない (通知の Lambda の `/aws/lambda/prd-amber-notification` は除く)                                                                                  |
 |                                | Route 53 のレコード、ACM の証明書                                               | `ecs-lab` を含むものがない                                                                                                                                                   |
 | ほぼ \$0 (残ってよい)          | ECR `prd-amber-api`                                                             | 合計 100 MB 未満                                                                                                                                                             |
 |                                | tfstate のバケット `prd-amber-tfstate`                                          | key ごとの古い版が 10 個以下。超えていたら NG (ライフサイクルの反映の途中でも NG)。料金はほぼ \$0 のため止める操作は要らず、料金の目安と、ライフサイクルが入っているかを書く |
+|                                | 通知の Lambda のロググループ `/aws/lambda/prd-amber-notification`               | 保存期間が 3 日。`enable_runtime` で消さずに常に置く (apply の前で、まだないのもよい)                                                                                        |
 | 無料 (残ってよい)              | VPC、サブネット、IGW、ルートテーブル、セキュリティグループ、S3 のエンドポイント | -                                                                                                                                                                            |
 |                                | IAM ロール、タスク定義、プレフィックスリスト                                    | -                                                                                                                                                                            |
 |                                | 通知 (EventBridge のルール・接続・API 送信先、SQS、ロール)                      | デッドレターキューが 0 件                                                                                                                                                    |
 |                                | Secrets Manager の `events!connection/prd-amber-slack/...`                      | このシークレット 1 つだけ (料金は API 送信先に含まれる)                                                                                                                      |
+|                                | DynamoDB の通知の状態のテーブル `prd-amber-notification`                        | このテーブル 1 つだけで、`PAY_PER_REQUEST` (オンデマンド)                                                                                                                    |
+|                                | SSM のパラメータ `/prd-amber/notification/slack-bot-token`                      | このパラメータ 1 つだけで、`Standard` (標準)                                                                                                                                 |
 
 - AWS Config は、アカウント全体で設定の変化を記録している。`enable_runtime` を切り替えるたびに、記録 1 件ごとの小さな料金がかかる (置いておくだけではかからない)
 - 構成を変えて、置いておくだけで料金がかかるリソースを足したら、この表と `scripts/cli/checks/` の該当するスクリプトと `scripts/mcp/check.py` と `report-template.md` を一緒に直す。新しい区分なら `scripts/cli/checks/` にファイルを足し、`scripts/cli/check.sh` の一覧に加える
