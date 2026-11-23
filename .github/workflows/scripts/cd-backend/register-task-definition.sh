@@ -30,11 +30,28 @@ aws ecs describe-task-definition --task-definition "$TASK_DEFINITION_FAMILY" \
 source_arn=$(jq -r '.taskDefinitionArn' "${workdir}/source.json")
 
 # 登録の入力に使えない、ECS が付けた項目は消す
-jq --arg name "$CONTAINER_NAME" --arg image "$IMAGE" '
-    .containerDefinitions |= map(if .name == $name then .image = $image else . end)
-    | del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities,
-        .registeredAt, .registeredBy, .deregisteredAt)
-' "${workdir}/source.json" > "${workdir}/new.json"
+jq \
+    --arg name "$CONTAINER_NAME" \
+    --arg image "$IMAGE" \
+    '
+    .containerDefinitions |= map(
+        if .name == $name then
+            .image = $image
+        else
+            .
+        end
+    )
+    | del(
+        .taskDefinitionArn,
+        .revision,
+        .status,
+        .requiresAttributes,
+        .compatibilities,
+        .registeredAt,
+        .registeredBy,
+        .deregisteredAt
+    )
+    ' "${workdir}/source.json" > "${workdir}/new.json"
 
 arn=$(aws ecs register-task-definition --cli-input-json "file://${workdir}/new.json" \
     --query 'taskDefinition.taskDefinitionArn' --output text)
