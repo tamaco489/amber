@@ -57,6 +57,20 @@ func ecsEvent(id, eventName, reason string) events.CloudWatchEvent {
 	}
 }
 
+// よく使うイベント
+var (
+	evStarted    = startedEvent("ev-started", true)
+	evInProgress = ecsEvent("ev-in-progress", deploy.ECSInProgress, "ECS deployment ecs-svc/1234567890 in progress.")
+	evRollback   = ecsEvent("ev-rollback", deploy.ECSInProgress, "ECS deployment circuit breaker: rolling back to deploymentId ecs-svc/111.")
+	evCompleted  = ecsEvent("ev-completed", deploy.ECSCompleted, "ECS deployment ecs-svc/1234567890 completed.")
+	evFailed     = ecsEvent("ev-failed", deploy.ECSFailed, "ECS deployment circuit breaker: task failed to start.")
+)
+
+// rawEvent は、detail をそのまま入れたイベントを作る (読み取りに失敗するイベントを作るため)
+func rawEvent(id, source, detailType, detail string) events.CloudWatchEvent {
+	return events.CloudWatchEvent{ID: id, Source: source, DetailType: detailType, Detail: []byte(detail)}
+}
+
 // parse は、イベントを読む。失敗したら panic する (テストの前提が壊れているため)
 func parse(raw events.CloudWatchEvent) *deploy.Event {
 	ev, err := deploy.ParseEvent(raw, testService)

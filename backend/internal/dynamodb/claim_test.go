@@ -17,15 +17,15 @@ func TestStoreClaim(t *testing.T) {
 			want: ClaimAcquired,
 		},
 		"済んでいる": {
-			err: &types.ConditionalCheckFailedException{Item: map[string]types.AttributeValue{
+			err: conditionFailed(map[string]types.AttributeValue{
 				"done": &types.AttributeValueMemberBOOL{Value: true},
-			}},
+			}),
 			want: ClaimDone,
 		},
 		"ほかの呼び出しが進めている": {
-			err: &types.ConditionalCheckFailedException{Item: map[string]types.AttributeValue{
+			err: conditionFailed(map[string]types.AttributeValue{
 				"lease_until": &types.AttributeValueMemberN{Value: "1"},
-			}},
+			}),
 			want: ClaimBusy,
 		},
 		"条件以外のエラーはエラーを返す": {
@@ -45,8 +45,7 @@ func TestStoreClaim(t *testing.T) {
 			if got != tt.want {
 				t.Errorf("result = %v, want %v", got, tt.want)
 			}
-			key := db.lastUpdate.Key[keyAttr].(*types.AttributeValueMemberS).Value
-			if key != "step#ev#reply" {
+			if key := keyOf(db.lastUpdate.Key); key != "step#ev#reply" {
 				t.Errorf("key = %q, want step#ev#reply", key)
 			}
 		})

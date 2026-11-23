@@ -1,7 +1,6 @@
 package slack_test
 
 import (
-	"strings"
 	"testing"
 	"time"
 
@@ -97,37 +96,23 @@ func TestReplyMessage(t *testing.T) {
 			if msg.ThreadTS != testParentTS || msg.Channel != testChannel {
 				t.Errorf("thread_ts = %q, channel = %q", msg.ThreadTS, msg.Channel)
 			}
-			if tt.wantHeader != "" && headerOf(msg) != tt.wantHeader {
-				t.Errorf("header = %q, want %q", headerOf(msg), tt.wantHeader)
-			}
-			if tt.wantColor != "" && colorOf(msg) != tt.wantColor {
-				t.Errorf("color = %q, want %q", colorOf(msg), tt.wantColor)
-			}
-			assertBody(t, bodyOf(msg), tt.wantBody, tt.notInBody)
+			assertMessage(t, msg, tt.wantHeader, tt.wantColor, tt.wantBody, tt.notInBody)
 		})
 	}
 }
 
 func TestParentMessage(t *testing.T) {
-	base := deploy.Parent{
-		DeploymentID:   testDeployment,
-		TS:             testParentTS,
-		Channel:        testChannel,
-		Service:        testService,
-		Version:        "v3",
-		Actor:          "tamaco489",
-		RunURL:         testRunURL,
-		TaskDefinition: testTaskDef,
-	}
+	completed := parentWith(deploy.StatusCompleted)
+	completed.CompletedAt = testTime
 
 	tests := map[string]struct {
-		parent     func() deploy.Parent
+		parent     *deploy.Parent
 		wantHeader string
 		wantColor  string
 		wantBody   []string
 	}{
 		"デプロイ中": {
-			parent:     func() deploy.Parent { p := base; p.Status = deploy.StatusDeploying; return p },
+			parent:     parentWith(deploy.StatusDeploying),
 			wantHeader: ":rocket: Deploying v3: prd-amber-api",
 			wantColor:  slack.ColorInfo,
 			wantBody: []string{
@@ -138,31 +123,24 @@ func TestParentMessage(t *testing.T) {
 			},
 		},
 		"バージョンがまだ分からない": {
-			parent: func() deploy.Parent {
-				return deploy.Parent{Service: testService, Status: deploy.StatusDeploying}
-			},
+			parent:     &deploy.Parent{Service: testService, Status: deploy.StatusDeploying},
 			wantHeader: ":rocket: Deploying: prd-amber-api",
 			wantBody:   []string{"*Triggered by*\nnone", "GitHub Actions run: none"},
 		},
 		"完了": {
-			parent: func() deploy.Parent {
-				p := base
-				p.Status = deploy.StatusCompleted
-				p.CompletedAt = testTime
-				return p
-			},
+			parent:     completed,
 			wantHeader: ":white_check_mark: Deployed v3: prd-amber-api",
 			wantColor:  slack.ColorSuccess,
 			wantBody:   []string{"*Status*\nCompleted", "*Completed at*\n2026-11-23 11:12:30 (JST)"},
 		},
 		"ロールバック中": {
-			parent:     func() deploy.Parent { p := base; p.Status = deploy.StatusRollingBack; return p },
+			parent:     parentWith(deploy.StatusRollingBack),
 			wantHeader: ":rewind: Rolling back v3: prd-amber-api",
 			wantColor:  slack.ColorDanger,
 			wantBody:   []string{"*Status*\nRolling back"},
 		},
 		"失敗": {
-			parent:     func() deploy.Parent { p := base; p.Status = deploy.StatusFailed; return p },
+			parent:     parentWith(deploy.StatusFailed),
 			wantHeader: ":x: Failed to deploy v3: prd-amber-api",
 			wantColor:  slack.ColorDanger,
 			wantBody:   []string{"*Status*\nFailed"},
@@ -171,30 +149,9 @@ func TestParentMessage(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			p := tt.parent()
-			msg := slack.ParentMessage(&p)
+			msg := slack.ParentMessage(tt.parent)
 
-			if got := headerOf(msg); got != tt.wantHeader {
-				t.Errorf("header = %q, want %q", got, tt.wantHeader)
-			}
-			if tt.wantColor != "" && colorOf(msg) != tt.wantColor {
-				t.Errorf("color = %q, want %q", colorOf(msg), tt.wantColor)
-			}
-			assertBody(t, bodyOf(msg), tt.wantBody, nil)
+			assertMessage(t, msg, tt.wantHeader, tt.wantColor, tt.wantBody, nil)
 		})
-	}
-}
-
-func assertBody(t *testing.T, body string, want, unwanted []string) {
-	t.Helper()
-	for _, w := range want {
-		if !strings.Contains(body, w) {
-			t.Errorf("body does not contain %q:\n%s", w, body)
-		}
-	}
-	for _, u := range unwanted {
-		if strings.Contains(body, u) {
-			t.Errorf("body contains %q:\n%s", u, body)
-		}
 	}
 }

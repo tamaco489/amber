@@ -75,20 +75,19 @@ func (f *fakeSlack) AddReaction(_ context.Context, channel, ts, name string) err
 
 // parents は、スレッドの外への投稿 (親の投稿)
 func (f *fakeSlack) parents() []slack.Message {
-	var out []slack.Message
-	for _, m := range f.posts {
-		if m.ThreadTS == "" {
-			out = append(out, m)
-		}
-	}
-	return out
+	return f.postsWhere(false)
 }
 
 // replies は、スレッドへの返信
 func (f *fakeSlack) replies() []slack.Message {
+	return f.postsWhere(true)
+}
+
+// postsWhere は、スレッドへの返信か (threaded) で、投稿を絞り込む
+func (f *fakeSlack) postsWhere(threaded bool) []slack.Message {
 	var out []slack.Message
 	for _, m := range f.posts {
-		if m.ThreadTS != "" {
+		if (m.ThreadTS != "") == threaded {
 			out = append(out, m)
 		}
 	}

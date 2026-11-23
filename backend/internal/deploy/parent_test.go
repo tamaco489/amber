@@ -17,35 +17,35 @@ func TestParentApply(t *testing.T) {
 	}{
 		"開始で値が埋まる": {
 			from:        deploy.StatusDeploying,
-			ev:          startedEvent("ev-started", true),
+			ev:          evStarted,
 			wantStatus:  deploy.StatusDeploying,
 			wantChanged: true,
 		},
 		"進行中では状態が変わらない": {
 			from:       deploy.StatusDeploying,
-			ev:         ecsEvent("ev-in-progress", deploy.ECSInProgress, "ECS deployment ecs-svc/1234567890 in progress."),
+			ev:         evInProgress,
 			wantStatus: deploy.StatusDeploying,
 		},
 		"ロールバックに進む": {
 			from:        deploy.StatusDeploying,
-			ev:          ecsEvent("ev-rollback", deploy.ECSInProgress, "ECS deployment circuit breaker: rolling back to deploymentId ecs-svc/111."),
+			ev:          evRollback,
 			wantStatus:  deploy.StatusRollingBack,
 			wantChanged: true,
 		},
 		"完了に進む": {
 			from:        deploy.StatusDeploying,
-			ev:          ecsEvent("ev-completed", deploy.ECSCompleted, "ECS deployment ecs-svc/1234567890 completed."),
+			ev:          evCompleted,
 			wantStatus:  deploy.StatusCompleted,
 			wantChanged: true,
 		},
 		"遅れて届いたロールバックで、完了から戻らない": {
 			from:       deploy.StatusCompleted,
-			ev:         ecsEvent("ev-rollback", deploy.ECSInProgress, "ECS deployment circuit breaker: rolling back to deploymentId ecs-svc/111."),
+			ev:         evRollback,
 			wantStatus: deploy.StatusCompleted,
 		},
 		"失敗のあとの完了では、失敗のまま": {
 			from:       deploy.StatusFailed,
-			ev:         ecsEvent("ev-completed", deploy.ECSCompleted, "ECS deployment ecs-svc/1234567890 completed."),
+			ev:         evCompleted,
 			wantStatus: deploy.StatusFailed,
 		},
 	}

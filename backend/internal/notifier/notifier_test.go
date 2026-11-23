@@ -102,18 +102,14 @@ func TestHandle(t *testing.T) {
 			calls: []call{{ev: evStarted}, {ev: evInProgress}, {ev: evRollback}},
 			check: func(t *testing.T, fs *fakeSlack, st *fakeStore) {
 				assertCounts(t, fs, 1, 3, 1, 0)
-				if got := st.parents[testDeployment].Status; got != deploy.StatusRollingBack {
-					t.Errorf("status = %q, want %q", got, deploy.StatusRollingBack)
-				}
+				assertStatus(t, st, deploy.StatusRollingBack)
 			},
 		},
 		"失敗で、親を失敗にし、x のスタンプを付ける": {
 			calls: []call{{ev: evStarted}, {ev: evRollback}, {ev: evFailed}},
 			check: func(t *testing.T, fs *fakeSlack, st *fakeStore) {
 				assertCounts(t, fs, 1, 3, 2, 1)
-				if got := st.parents[testDeployment].Status; got != deploy.StatusFailed {
-					t.Errorf("status = %q, want %q", got, deploy.StatusFailed)
-				}
+				assertStatus(t, st, deploy.StatusFailed)
 				if fs.reactions[0].name != "x" {
 					t.Errorf("reaction = %+v, want x", fs.reactions[0])
 				}
@@ -122,9 +118,7 @@ func TestHandle(t *testing.T) {
 		"遅れて届いたロールバックで、完了した親が戻らない": {
 			calls: []call{{ev: evStarted}, {ev: evCompleted}, {ev: evRollback}},
 			check: func(t *testing.T, _ *fakeSlack, st *fakeStore) {
-				if got := st.parents[testDeployment].Status; got != deploy.StatusCompleted {
-					t.Errorf("status = %q, want %q", got, deploy.StatusCompleted)
-				}
+				assertStatus(t, st, deploy.StatusCompleted)
 			},
 		},
 		"Slack の ok: false はエラーとして返す": {
@@ -167,13 +161,7 @@ func TestHandle(t *testing.T) {
 			if tt.setup != nil {
 				tt.setup(fs, st)
 			}
-			n := &Notifier{
-				Slack:   fs,
-				Store:   st,
-				Channel: testChannel,
-				Service: testService,
-				Now:     func() time.Time { return testTime },
-			}
+			n := newTestNotifier(fs, st)
 
 			for i, c := range tt.calls {
 				err := n.Handle(t.Context(), c.ev)
@@ -189,7 +177,7 @@ func TestHandle(t *testing.T) {
 func TestHandleBusyIsErrBusy(t *testing.T) {
 	st := newFakeStore()
 	st.steps["parent#"+testDeployment] = &fakeStep{leaseUntil: testTime.Add(time.Minute)}
-	n := &Notifier{Slack: &fakeSlack{}, Store: st, Channel: testChannel, Service: testService, Now: func() time.Time { return testTime }}
+	n := newTestNotifier(&fakeSlack{}, st)
 
 	if err := n.Handle(t.Context(), evInProgress); !errors.Is(err, ErrBusy) {
 		t.Errorf("err = %v, want ErrBusy", err)
@@ -205,5 +193,24 @@ func assertCounts(t *testing.T, fs *fakeSlack, parents, replies, updates, reacti
 		if got[i] != want[i] {
 			t.Errorf("%s = %d, want %d", name, got[i], want[i])
 		}
+	}
+}
+
+// newTestNotifier は、差し替えを使い、時刻を testTime に止めた Notifier を作る
+func newTestNotifier(fs *fakeSlack, st *fakeStore) *Notifier {
+	return &Notifier{
+		Slack:   fs,
+		Store:   st,
+		Channel: testChannel,
+		Service: testService,
+		Now:     func() time.Time { return testTime },
+	}
+}
+
+// assertStatus は、残っている親の状態を確かめる
+func assertStatus(t *testing.T, st *fakeStore, want deploy.Status) {
+	t.Helper()
+	if got := st.parents[testDeployment].Status; got != want {
+		t.Errorf("status = %q, want %q", got, want)
 	}
 }

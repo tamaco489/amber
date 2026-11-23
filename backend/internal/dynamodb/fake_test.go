@@ -5,6 +5,7 @@ import (
 	"time"
 
 	ddb "github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
 // テストで使う値
@@ -49,4 +50,18 @@ func (f *fakeAPI) UpdateItem(_ context.Context, in *ddb.UpdateItemInput, _ ...fu
 		return nil, f.err
 	}
 	return &ddb.UpdateItemOutput{}, nil
+}
+
+// keyOf は、アイテムやキーから pk の値を取り出す
+func keyOf(item map[string]types.AttributeValue) string {
+	v, ok := item[keyAttr].(*types.AttributeValueMemberS)
+	if !ok {
+		return ""
+	}
+	return v.Value
+}
+
+// conditionFailed は、条件付きの書き込みが条件に合わなかったときのエラー (item は、そのときのアイテム)
+func conditionFailed(item map[string]types.AttributeValue) error {
+	return &types.ConditionalCheckFailedException{Item: item}
 }

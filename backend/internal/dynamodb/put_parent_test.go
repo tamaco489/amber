@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 
 	"github.com/tamaco489/amber/backend/internal/deploy"
 )
@@ -27,7 +26,7 @@ func TestStorePutParent(t *testing.T) {
 		},
 		"先に書き換えられていたら ErrConflict を返す": {
 			rev:           3,
-			err:           &types.ConditionalCheckFailedException{},
+			err:           conditionFailed(nil),
 			wantCondition: "#rev = :prev",
 			wantErr:       ErrConflict,
 		},

@@ -26,7 +26,7 @@ func TestParentItemRoundTrip(t *testing.T) {
 	}
 
 	item := parentToItem(want, testTime)
-	if got := item[keyAttr].(*types.AttributeValueMemberS).Value; got != "deployment#"+testDeployment {
+	if got := keyOf(item); got != "deployment#"+testDeployment {
 		t.Errorf("pk = %q", got)
 	}
 	exp := item["expires_at"].(*types.AttributeValueMemberN).Value

@@ -59,31 +59,36 @@ func TestClientCall(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if got := r.Header.Get("Authorization"); got != "Bearer xoxb-test" {
-					t.Errorf("Authorization = %q, want Bearer xoxb-test", got)
-				}
-				var payload map[string]any
-				if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-					t.Errorf("request body is not json: %v", err)
-				}
-				w.WriteHeader(tt.status)
-				_, _ = w.Write([]byte(tt.body))
-			}))
-			defer srv.Close()
-
-			c := NewClient("xoxb-test").WithBaseURL(srv.URL + "/")
+			c := newTestClient(t, tt.status, tt.body)
 			err := tt.call(t, c)
 
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("err = %v, wantErr %v", err, tt.wantErr)
 			}
 			if tt.wantAPIErr != "" {
-				var apiErr *APIError
-				if !errors.As(err, &apiErr) || apiErr.Code != tt.wantAPIErr {
+				if apiErr, ok := errors.AsType[*APIError](err); !ok || apiErr.Code != tt.wantAPIErr {
 					t.Errorf("err = %v, want APIError %q", err, tt.wantAPIErr)
 				}
 			}
 		})
 	}
+}
+
+// newTestClient は、決めた status と body を返すテストサーバーに向けたクライアントを作る
+//   - リクエストに、ボットトークンと JSON の本文が付いていることも確かめる
+func newTestClient(t *testing.T, status int, body string) *Client {
+	t.Helper()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.Header.Get("Authorization"); got != "Bearer xoxb-test" {
+			t.Errorf("Authorization = %q, want Bearer xoxb-test", got)
+		}
+		var payload map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Errorf("request body is not json: %v", err)
+		}
+		w.WriteHeader(status)
+		_, _ = w.Write([]byte(body))
+	}))
+	t.Cleanup(srv.Close)
+	return NewClient("xoxb-test").WithBaseURL(srv.URL + "/")
 }
