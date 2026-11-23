@@ -30,6 +30,8 @@ SCRIPT_DENY = {"allow-my-ip.sh", "push.sh"}
 # aws CLI で通す操作 (読み取りだけ)
 AWS_ALLOW_PREFIXES = ("describe-", "list-", "get-", "head-", "batch-get-", "lookup-", "search-", "filter-")
 AWS_ALLOW_EXACT = {"help", "wait", "tail", "ls"}
+# サービスごとに通す、上の決まりに当てはまらない読み取りの操作
+AWS_ALLOW_BY_SERVICE = {"dynamodb": {"scan", "query"}}
 # 値を取らない aws のグローバルオプション
 AWS_BOOL_OPTIONS = {"--debug", "--no-verify-ssl", "--no-paginate", "--no-sign-request", "--no-cli-pager", "--version"}
 
@@ -133,6 +135,8 @@ def check_aws(args):
         return None
     service, operation = rest[0], rest[1]
     if operation in AWS_ALLOW_EXACT or operation.startswith(AWS_ALLOW_PREFIXES):
+        return None
+    if operation in AWS_ALLOW_BY_SERVICE.get(service, set()):
         return None
     if service == "ecr" and operation == "get-login-password":
         return None
