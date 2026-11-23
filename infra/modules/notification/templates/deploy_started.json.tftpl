@@ -1,0 +1,47 @@
+{
+  "channel": "${channel}",
+  "text": ":rocket: Deploy started: <version>",
+  "attachments": [
+    {
+      "color": "${color}",
+      "blocks": [
+        {
+          "type": "header",
+          "text": {
+            "type": "plain_text",
+            "text": ":rocket: Deploy started: <version>",
+            "emoji": true
+          }
+        },
+        {
+          "type": "section",
+          "fields": [
+            {
+              "type": "mrkdwn",
+              "text": "*Triggered by*\n<actor>"
+            },
+            {
+              "type": "mrkdwn",
+              "text": "*Pushed in this run*\n<pushed>"
+            },
+            {
+              "type": "mrkdwn",
+              "text": "*Deployment ID*\n<deploymentId>"
+            },
+            {
+              "type": "mrkdwn",
+              "text": "*Task definition*\n<taskDefinition>"
+            }
+          ]
+        },
+        {
+          "type": "section",
+          "text": {
+            "type": "mrkdwn",
+            "text": "*Run*\n<runUrl>"
+          }
+        }
+      ]
+    }
+  ]
+}

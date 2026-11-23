@@ -47,9 +47,9 @@ resource "aws_cloudwatch_event_rule" "ecs_deployment" {
   })
 }
 
-# 本文の組み立て (Slack の Block Kit。色の帯を付けるため attachments に入れる)
+# 本文の組み立て (templates/ の Slack の Block Kit。色の帯を付けるため attachments に入れる)
+#   - ${...} は Terraform が plan のときに、<...> は EventBridge がイベントが届いたときに埋める
 #   - EventBridge は、取り出した値をエスケープせずに埋め込む。reason に " が入ると本文の JSON が壊れ、その通知は届かない
-#   - \n は JSON の改行 (heredoc はバックスラッシュをそのまま残す)
 #   - text は、通知のプレビューに出る文
 # DOC: https://docs.slack.dev/reference/block-kit/blocks
 resource "aws_cloudwatch_event_target" "ecs_deployment" {
@@ -67,56 +67,12 @@ resource "aws_cloudwatch_event_target" "ecs_deployment" {
       time         = "$.time"
     }
 
-    input_template = <<-EOT
-      {
-        "channel": "${var.slack_channel_id}",
-        "text": "${each.value.title}: ${local.name_prefix}-api",
-        "attachments": [
-          {
-            "color": "${each.value.color}",
-            "blocks": [
-              {
-                "type": "header",
-                "text": {
-                  "type": "plain_text",
-                  "text": "${each.value.title}",
-                  "emoji": true
-                }
-              },
-              {
-                "type": "section",
-                "fields": [
-                  {
-                    "type": "mrkdwn",
-                    "text": "*Service*\n${local.name_prefix}-api"
-                  },
-                  {
-                    "type": "mrkdwn",
-                    "text": "*Deployment ID*\n<deploymentId>"
-                  }
-                ]
-              },
-              {
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": "*Reason*\n<reason>"
-                }
-              },
-              {
-                "type": "context",
-                "elements": [
-                  {
-                    "type": "mrkdwn",
-                    "text": "<time> (UTC)"
-                  }
-                ]
-              }
-            ]
-          }
-        ]
-      }
-    EOT
+    input_template = templatefile("${path.module}/templates/ecs_deployment.json.tftpl", {
+      channel = var.slack_channel_id
+      color   = each.value.color
+      title   = each.value.title
+      service = "${local.name_prefix}-api"
+    })
   }
 
   retry_policy {

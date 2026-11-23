@@ -13,7 +13,7 @@ resource "aws_cloudwatch_event_rule" "deploy_started" {
   })
 }
 
-# 本文の組み立ては rule_ecs_deployment.tf と同じ (Block Kit を attachments に入れる)
+# 本文の組み立ては rule_ecs_deployment.tf と同じ (templates/deploy_started.json.tftpl)
 resource "aws_cloudwatch_event_target" "deploy_started" {
   rule      = aws_cloudwatch_event_rule.deploy_started.name
   target_id = "slack"
@@ -30,55 +30,10 @@ resource "aws_cloudwatch_event_target" "deploy_started" {
       runUrl         = "$.detail.runUrl"
     }
 
-    input_template = <<-EOT
-      {
-        "channel": "${var.slack_channel_id}",
-        "text": ":rocket: Deploy started: <version>",
-        "attachments": [
-          {
-            "color": "${local.slack_colors.info}",
-            "blocks": [
-              {
-                "type": "header",
-                "text": {
-                  "type": "plain_text",
-                  "text": ":rocket: Deploy started: <version>",
-                  "emoji": true
-                }
-              },
-              {
-                "type": "section",
-                "fields": [
-                  {
-                    "type": "mrkdwn",
-                    "text": "*Triggered by*\n<actor>"
-                  },
-                  {
-                    "type": "mrkdwn",
-                    "text": "*Pushed in this run*\n<pushed>"
-                  },
-                  {
-                    "type": "mrkdwn",
-                    "text": "*Deployment ID*\n<deploymentId>"
-                  },
-                  {
-                    "type": "mrkdwn",
-                    "text": "*Task definition*\n<taskDefinition>"
-                  }
-                ]
-              },
-              {
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": "*Run*\n<runUrl>"
-                }
-              }
-            ]
-          }
-        ]
-      }
-    EOT
+    input_template = templatefile("${path.module}/templates/deploy_started.json.tftpl", {
+      channel = var.slack_channel_id
+      color   = local.slack_colors.info
+    })
   }
 
   retry_policy {
