@@ -20,7 +20,8 @@ ng() {
 }
 
 printf '== 1. 雛形の記入漏れ\n'
-if grep -n '(記入:' "$report"; then
+# コメントの行 (<!-- ... -->) は対象から外す
+if grep -n '(記入:' "$report" | grep -v '<!--'; then
     ng "記入されていない箇所がある"
 else
     echo "OK"
