@@ -9,6 +9,8 @@ import (
 
 	"github.com/aws/aws-lambda-go/events"
 
+	"github.com/tamaco489/amber/backend/internal/deploy"
+	"github.com/tamaco489/amber/backend/internal/dynamodb"
 	"github.com/tamaco489/amber/backend/internal/slack"
 )
 
@@ -19,40 +21,34 @@ var ErrBusy = errors.New("step is in progress in another invocation")
 // 親の書き換えで、ほかの呼び出しとぶつかったときに、読み直して書き直す回数
 const maxParentWriteAttempts = 3
 
-// Slack は、Notifier が使う Slack の Web API (テストで差し替える)
-type Slack interface {
-	PostMessage(ctx context.Context, msg slack.Message) (string, error)
-	UpdateMessage(ctx context.Context, msg slack.Message) error
-	AddReaction(ctx context.Context, channel, ts, name string) error
+// 完了と失敗で、親に付けるスタンプ
+var reactions = map[deploy.Kind]string{
+	deploy.KindCompleted: "white_check_mark",
+	deploy.KindFailed:    "x",
 }
 
 // Notifier は、イベントを受けて Slack に通知する
 type Notifier struct {
-	Slack Slack
-	Store Store
-
-	// 投稿するチャンネルの ID
-	Channel string
-	// Deployment Started (サービスの名前を持たない) で使う、サービスの名前
-	Service string
-
-	// 今の時刻 (テストで差し替える)
-	Now func() time.Time
+	Slack   Slack            // Slack の Web API
+	Store   Store            // 親の投稿と手順の記録を残す場所
+	Channel string           // 投稿するチャンネルの ID
+	Service string           // Deployment Started (サービスの名前を持たない) で使う、サービスの名前
+	Now     func() time.Time // 今の時刻 (テストで差し替える。nil なら time.Now)
 }
 
 func (n *Notifier) now() time.Time {
-	if n.Now != nil {
-		return n.Now()
+	if n.Now == nil {
+		return time.Now()
 	}
-	return time.Now()
+	return n.Now()
 }
 
 // Handle は、Lambda のハンドラー。1 回の呼び出しで 1 つのイベントを処理する
 //   - 通知の対象でないイベントは、ログに残して成功として返す (再試行しても変わらないため)
 //   - それ以外の失敗はエラーとして返し、Lambda の非同期呼び出しの再試行と、失敗時の送り先に乗せる
 func (n *Notifier) Handle(ctx context.Context, raw events.CloudWatchEvent) error {
-	ev, err := ParseEvent(raw, n.Service)
-	if errors.Is(err, ErrUnsupported) {
+	ev, err := deploy.ParseEvent(raw, n.Service)
+	if errors.Is(err, deploy.ErrUnsupported) {
 		slog.WarnContext(ctx, "skip unsupported event", "id", raw.ID, "error", err)
 		return nil
 	}
@@ -70,49 +66,53 @@ func (n *Notifier) Handle(ctx context.Context, raw events.CloudWatchEvent) error
 	}
 
 	// 2. スレッドへの返信
-	err = n.step(ctx, ev.ID+"#reply", func() error {
-		_, err := n.Slack.PostMessage(ctx, replyMessage(ev, parent.Channel, parent.TS))
-		return err
-	})
-	if err != nil {
+	if err := n.reply(ctx, ev, parent); err != nil {
 		return err
 	}
 
 	// 3. 親の書き換え
-	//   - このイベントで親を作ったときは、作るときに反映済みのため書き換えない
-	//   - ロールバックでない進行中は、親を変えない
-	if !created && ev.Kind != KindInProgress {
-		err = n.step(ctx, ev.ID+"#parent", func() error {
-			return n.updateParent(ctx, ev)
-		})
-		if err != nil {
-			return err
-		}
+	if err := n.rewriteParent(ctx, ev, created); err != nil {
+		return err
 	}
 
 	// 4. スタンプ
-	if name := reactionFor(ev.Kind); name != "" {
-		err = n.step(ctx, ev.ID+"#reaction", func() error {
-			return n.Slack.AddReaction(ctx, parent.Channel, parent.TS, name)
-		})
-		if err != nil {
-			return err
-		}
+	if err := n.react(ctx, ev, parent); err != nil {
+		return err
 	}
 
 	log.InfoContext(ctx, "handled event", "parent_ts", parent.TS, "parent_created", created)
 	return nil
 }
 
-// reactionFor は、親に付けるスタンプ (完了と失敗だけ)
-func reactionFor(k Kind) string {
-	switch k {
-	case KindCompleted:
-		return "white_check_mark"
-	case KindFailed:
-		return "x"
+// reply は、イベントをスレッドに返信する
+func (n *Notifier) reply(ctx context.Context, ev *deploy.Event, parent *deploy.Parent) error {
+	return n.step(ctx, ev.ID+"#reply", func() error {
+		_, err := n.Slack.PostMessage(ctx, slack.ReplyMessage(ev, parent.Channel, parent.TS))
+		return err
+	})
+}
+
+// rewriteParent は、イベントを親に反映して書き換える
+//   - このイベントで親を作ったときは、作るときに反映済みのため書き換えない
+//   - ロールバックでない進行中は、親を変えない
+func (n *Notifier) rewriteParent(ctx context.Context, ev *deploy.Event, created bool) error {
+	if created || ev.Kind == deploy.KindInProgress {
+		return nil
 	}
-	return ""
+	return n.step(ctx, ev.ID+"#parent", func() error {
+		return n.updateParent(ctx, ev)
+	})
+}
+
+// react は、完了と失敗のとき、親にスタンプを付ける
+func (n *Notifier) react(ctx context.Context, ev *deploy.Event, parent *deploy.Parent) error {
+	name, ok := reactions[ev.Kind]
+	if !ok {
+		return nil
+	}
+	return n.step(ctx, ev.ID+"#reaction", func() error {
+		return n.Slack.AddReaction(ctx, parent.Channel, parent.TS, name)
+	})
 }
 
 // step は、手順に印を付けてから fn を実行し、済んだ印を付ける
@@ -123,145 +123,141 @@ func (n *Notifier) step(ctx context.Context, key string, fn func() error) error 
 	if err != nil {
 		return err
 	}
-	switch res {
-	case ClaimDone:
+	if res == dynamodb.ClaimDone {
 		return nil
-	case ClaimBusy:
+	}
+	if res == dynamodb.ClaimBusy {
 		return fmt.Errorf("%s: %w", key, ErrBusy)
 	}
 
 	if err := fn(); err != nil {
-		if rerr := n.Store.Release(ctx, key); rerr != nil {
-			slog.WarnContext(ctx, "failed to release step", "key", key, "error", rerr)
-		}
+		n.release(ctx, key)
 		return fmt.Errorf("%s: %w", key, err)
 	}
 	return n.Store.Done(ctx, key, n.now())
 }
 
+// release は、手順の印を外す。外せなくても、印の期限が切れれば進め直せるため、ログに残すだけにする
+func (n *Notifier) release(ctx context.Context, key string) {
+	if err := n.Store.Release(ctx, key); err != nil {
+		slog.WarnContext(ctx, "failed to release step", "key", key, "error", err)
+	}
+}
+
 // ensureParent は、デプロイの親の投稿を返す。まだ無ければ、このイベントから作って投稿する
 //   - 親を作る手順はデプロイ ID ごとに 1 つで、印を付けられた呼び出しだけが投稿する (親が 2 つできないようにする)
 //   - 作ったときは created を true で返す
-func (n *Notifier) ensureParent(ctx context.Context, ev Event) (Parent, bool, error) {
-	p, ok, err := n.Store.GetParent(ctx, ev.DeploymentID)
-	if err != nil || ok {
-		return p, false, err
+func (n *Notifier) ensureParent(ctx context.Context, ev *deploy.Event) (*deploy.Parent, bool, error) {
+	p, err := n.Store.GetParent(ctx, ev.DeploymentID)
+	if err != nil {
+		return nil, false, err
+	}
+	if p != nil {
+		return p, false, nil
 	}
 
 	key := "parent#" + ev.DeploymentID
 	res, err := n.Store.Claim(ctx, key, n.now())
 	if err != nil {
-		return Parent{}, false, err
+		return nil, false, err
 	}
-	switch res {
-	case ClaimBusy:
-		return Parent{}, false, fmt.Errorf("%s: %w", key, ErrBusy)
-	case ClaimDone:
-		p, ok, err := n.Store.GetParent(ctx, ev.DeploymentID)
-		if err == nil && !ok {
-			err = fmt.Errorf("%s is done but the parent is missing", key)
-		}
+	if res == dynamodb.ClaimBusy {
+		return nil, false, fmt.Errorf("%s: %w", key, ErrBusy)
+	}
+	if res == dynamodb.ClaimDone {
+		p, err := n.existingParent(ctx, ev.DeploymentID, key)
 		return p, false, err
 	}
 
 	// 印を付けるまでのあいだに、ほかの呼び出しが作り終えていることがある
-	if p, ok, err := n.Store.GetParent(ctx, ev.DeploymentID); err != nil || ok {
-		if ok {
-			err = n.Store.Done(ctx, key, n.now())
-		}
-		return p, false, err
+	p, err = n.Store.GetParent(ctx, ev.DeploymentID)
+	if err != nil {
+		return nil, false, err
+	}
+	if p != nil {
+		return p, false, n.Store.Done(ctx, key, n.now())
 	}
 
-	p, _ = applyEvent(Parent{
+	p, err = n.postParent(ctx, ev, key)
+	if err != nil {
+		return nil, false, err
+	}
+	return p, true, nil
+}
+
+// existingParent は、親を作る手順が済んでいるときに、残っている親を読む
+func (n *Notifier) existingParent(ctx context.Context, deploymentID, key string) (*deploy.Parent, error) {
+	p, err := n.Store.GetParent(ctx, deploymentID)
+	if err != nil {
+		return nil, err
+	}
+	if p == nil {
+		return nil, fmt.Errorf("%s is done but the parent is missing", key)
+	}
+	return p, nil
+}
+
+// postParent は、このイベントから親を組み立てて投稿し、残す
+func (n *Notifier) postParent(ctx context.Context, ev *deploy.Event, key string) (*deploy.Parent, error) {
+	p := &deploy.Parent{
 		DeploymentID: ev.DeploymentID,
 		Channel:      n.Channel,
 		Service:      ev.Service,
-		Status:       StatusDeploying,
-	}, ev)
+		Status:       deploy.StatusDeploying,
+	}
+	p.Apply(ev)
 
-	ts, err := n.Slack.PostMessage(ctx, parentMessage(p))
+	ts, err := n.Slack.PostMessage(ctx, slack.ParentMessage(p))
 	if err != nil {
-		if rerr := n.Store.Release(ctx, key); rerr != nil {
-			slog.WarnContext(ctx, "failed to release step", "key", key, "error", rerr)
-		}
-		return Parent{}, false, fmt.Errorf("%s: %w", key, err)
+		n.release(ctx, key)
+		return nil, fmt.Errorf("%s: %w", key, err)
 	}
 
 	p.TS = ts
 	p.Rev = 1
 	if err := n.Store.PutParent(ctx, p, n.now()); err != nil {
-		return Parent{}, false, err
+		return nil, err
 	}
 	if err := n.Store.Done(ctx, key, n.now()); err != nil {
-		return Parent{}, false, err
+		return nil, err
 	}
-	return p, true, nil
+	return p, nil
 }
 
 // updateParent は、イベントを親の状態に反映して保存し、親の投稿を書き換える
 //   - 保存したあと chat.update の前に止まっても、再試行で同じ状態のまま chat.update をやり直す
-func (n *Notifier) updateParent(ctx context.Context, ev Event) error {
+//   - ほかの呼び出しと書き込みがぶつかったら、読み直して書き直す
+func (n *Notifier) updateParent(ctx context.Context, ev *deploy.Event) error {
 	for range maxParentWriteAttempts {
-		cur, ok, err := n.Store.GetParent(ctx, ev.DeploymentID)
+		next, err := n.saveParent(ctx, ev)
+		if errors.Is(err, dynamodb.ErrConflict) {
+			continue
+		}
 		if err != nil {
 			return err
 		}
-		if !ok {
-			return fmt.Errorf("parent of %s is missing", ev.DeploymentID)
-		}
-
-		next, changed := applyEvent(cur, ev)
-		if changed {
-			next.Rev = cur.Rev + 1
-			err := n.Store.PutParent(ctx, next, n.now())
-			if errors.Is(err, ErrConflict) {
-				continue
-			}
-			if err != nil {
-				return err
-			}
-		}
-		return n.Slack.UpdateMessage(ctx, parentMessage(next))
+		return n.Slack.UpdateMessage(ctx, slack.ParentMessage(next))
 	}
-	return fmt.Errorf("update parent of %s: %w", ev.DeploymentID, ErrConflict)
+	return fmt.Errorf("update parent of %s: %w", ev.DeploymentID, dynamodb.ErrConflict)
 }
 
-// applyEvent は、イベントを親の状態に反映する。変わったかどうかも返す
-//   - 開始: バージョン、起動した人、リンク、タスク定義を埋める
-//   - ロールバック・完了・失敗: 状態を進める (戻す方向には変えない)
-func applyEvent(p Parent, ev Event) (Parent, bool) {
-	changed := false
-	set := func(dst *string, v string) {
-		if v != "" && *dst != v {
-			*dst = v
-			changed = true
-		}
+// saveParent は、今の親にイベントを反映し、変わっていれば保存する。反映したあとの親を返す
+func (n *Notifier) saveParent(ctx context.Context, ev *deploy.Event) (*deploy.Parent, error) {
+	cur, err := n.Store.GetParent(ctx, ev.DeploymentID)
+	if err != nil {
+		return nil, err
 	}
-	advance := func(s Status) bool {
-		if s.rank() > p.Status.rank() {
-			p.Status = s
-			changed = true
-			return true
-		}
-		return false
+	if cur == nil {
+		return nil, fmt.Errorf("parent of %s is missing", ev.DeploymentID)
 	}
 
-	set(&p.Service, ev.Service)
-	switch ev.Kind {
-	case KindStarted:
-		set(&p.Version, ev.Version)
-		set(&p.Actor, ev.Actor)
-		set(&p.RunURL, ev.RunURL)
-		set(&p.TaskDefinition, ev.TaskDefinition)
-	case KindRollback:
-		advance(StatusRollingBack)
-	case KindCompleted:
-		if advance(StatusCompleted) {
-			p.CompletedAt = ev.Time.UTC().Truncate(time.Second)
-		}
-	case KindFailed:
-		advance(StatusFailed)
-	case KindInProgress:
+	next := *cur
+	if !next.Apply(ev) {
+		return &next, nil
 	}
-	return p, changed
+	next.Rev = cur.Rev + 1
+	if err := n.Store.PutParent(ctx, &next, n.now()); err != nil {
+		return nil, err
+	}
+	return &next, nil
 }

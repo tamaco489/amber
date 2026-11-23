@@ -1,5 +1,5 @@
 // notifier は、デプロイの EventBridge のイベントを受け、デプロイごとに 1 つの Slack のスレッドにまとめる Lambda
-//   - 処理の中身とテーブルのアイテムの置き方は internal/notifier にある
+//   - 処理の流れは internal/notifier、テーブルのアイテムの置き方は internal/dynamodb にある
 //   - Slack のボットトークンは、コールドスタートのときに 1 回だけ SSM パラメータストアから読む
 //
 // 環境変数:
@@ -19,18 +19,20 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	ddb "github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 
+	"github.com/tamaco489/amber/backend/internal/dynamodb"
 	"github.com/tamaco489/amber/backend/internal/notifier"
 	"github.com/tamaco489/amber/backend/internal/slack"
 )
 
+// env は、Lambda の環境変数 (パッケージのコメントを参照)
 type env struct {
-	tableName      string
-	tokenParameter string
-	channelID      string
-	serviceName    string
+	tableName      string // TABLE_NAME
+	tokenParameter string // SLACK_TOKEN_PARAMETER
+	channelID      string // SLACK_CHANNEL_ID
+	serviceName    string // SERVICE_NAME
 }
 
 func main() {
@@ -89,7 +91,7 @@ func setup(ctx context.Context) (*notifier.Notifier, error) {
 
 	return &notifier.Notifier{
 		Slack:   slack.NewClient(aws.ToString(out.Parameter.Value)),
-		Store:   notifier.NewDynamoDBStore(dynamodb.NewFromConfig(cfg), e.tableName),
+		Store:   dynamodb.New(ddb.NewFromConfig(cfg), e.tableName),
 		Channel: e.channelID,
 		Service: e.serviceName,
 	}, nil

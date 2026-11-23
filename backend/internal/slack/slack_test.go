@@ -9,16 +9,14 @@ import (
 )
 
 func TestClientCall(t *testing.T) {
-	tests := []struct {
-		name       string
+	tests := map[string]struct {
 		status     int
 		body       string
 		call       func(t *testing.T, c *Client) error
 		wantErr    bool
 		wantAPIErr string
 	}{
-		{
-			name:   "post message returns ts",
+		"投稿すると ts を返す": {
 			status: http.StatusOK,
 			body:   `{"ok":true,"ts":"1700000000.000100"}`,
 			call: func(t *testing.T, c *Client) error {
@@ -29,8 +27,7 @@ func TestClientCall(t *testing.T) {
 				return err
 			},
 		},
-		{
-			name:   "ok false is an error",
+		"ok: false はエラーにする": {
 			status: http.StatusOK,
 			body:   `{"ok":false,"error":"channel_not_found"}`,
 			call: func(t *testing.T, c *Client) error {
@@ -39,8 +36,7 @@ func TestClientCall(t *testing.T) {
 			wantErr:    true,
 			wantAPIErr: "channel_not_found",
 		},
-		{
-			name:   "rate limited is an error",
+		"レート制限 (429) はエラーにする": {
 			status: http.StatusTooManyRequests,
 			body:   ``,
 			call: func(t *testing.T, c *Client) error {
@@ -48,23 +44,21 @@ func TestClientCall(t *testing.T) {
 			},
 			wantErr: true,
 		},
-		{
-			name:    "broken json is an error",
+		"壊れた JSON はエラーにする": {
 			status:  http.StatusOK,
 			body:    `<html>`,
 			call:    func(t *testing.T, c *Client) error { return c.AddReaction(t.Context(), "C1", "1", "x") },
 			wantErr: true,
 		},
-		{
-			name:   "already reacted is not an error",
+		"スタンプが付いている (already_reacted) ときはエラーにしない": {
 			status: http.StatusOK,
 			body:   `{"ok":false,"error":"already_reacted"}`,
 			call:   func(t *testing.T, c *Client) error { return c.AddReaction(t.Context(), "C1", "1", "x") },
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if got := r.Header.Get("Authorization"); got != "Bearer xoxb-test" {
 					t.Errorf("Authorization = %q, want Bearer xoxb-test", got)
