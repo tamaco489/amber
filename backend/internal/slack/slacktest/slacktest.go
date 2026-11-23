@@ -36,12 +36,17 @@ func BodyOf(m slack.Message) string {
 
 func writeBlock(b *strings.Builder, blk slack.Block) {
 	if blk.Text != nil {
-		b.WriteString(blk.Text.Text + "\n")
+		writeLine(b, blk.Text.Text)
 	}
 	for _, f := range blk.Fields {
-		b.WriteString(f.Text + "\n")
+		writeLine(b, f.Text)
 	}
 	for _, e := range blk.Elements {
-		b.WriteString(e.Text + "\n")
+		writeLine(b, e.Text)
 	}
+}
+
+func writeLine(b *strings.Builder, s string) {
+	b.WriteString(s)
+	b.WriteByte('\n')
 }
