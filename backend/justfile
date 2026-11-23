@@ -15,12 +15,16 @@ fmt:
 lint:
     golangci-lint run
 
+# gopls の解析を流す (golangci-lint に無い解析を拾う。処理は scripts/gopls-check.sh)
+gopls:
+    scripts/gopls-check.sh
+
 # テストを実行する
 test:
     go test -race ./...
 
-# lint とテストをまとめて実行する
-check: lint test
+# lint、gopls の解析、テストをまとめて実行する
+check: lint gopls test
 
 
 # ==========================================================================================
@@ -39,3 +43,14 @@ run version="dev":
 [doc("ビルドして ECR に push し、ダイジェストを表示する")]
 push version env="prd": (build version)
     scripts/push.sh {{ image }} {{ version }} {{ env }}
+
+
+# ==========================================================================================
+# Lambda
+# ==========================================================================================
+# notifier (デプロイの通知の Lambda) を linux/arm64 でビルドし、dist/notifier/bootstrap に置く
+#   - ランタイムは provided.al2023 のため、実行ファイルの名前は bootstrap にする
+#   - lambda.norpc は、provided のランタイムで使わない RPC のコードを外すタグ
+#   - AWS に置く手順は #53 で足す
+build-notifier:
+    CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags "-s -w" -tags lambda.norpc -o dist/notifier/bootstrap ./cmd/notifier
