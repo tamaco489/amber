@@ -26,6 +26,7 @@ AWS (東京) に Terraform で構築し、小さな Go のアプリを動かす�
 | [docs/infra/notification.ja.md](docs/infra/notification.ja.md) | デプロイの Slack への通知 (`modules/notification/`) とボットトークンを入れる手順 | 通知の内容・ルール・送り先を変えたとき                |
 | [docs/cd/task-definition.ja.md](docs/cd/task-definition.ja.md) | Terraform で変えたタスク定義を、`cd-backend` でサービスに届ける手順              | `cd-backend` の複製元を変えたとき                     |
 | [docs/ci/workflow-lint.ja.md](docs/ci/workflow-lint.ja.md)     | `ci-actions` の検査 (actionlint、shellcheck) と手元での流し方                    | 検査の対象・ツール・バージョンを変えたとき            |
+| [docs/loadtest/k6.ja.md](docs/loadtest/k6.ja.md)               | デプロイ中の k6 の負荷試験 (`loadtest/`) の閾値・失敗の種類・流し方              | 閾値・失敗の種類・k6 の版・レシピを変えたとき         |
 
 ## 費用を止める運用
 
