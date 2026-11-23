@@ -52,3 +52,13 @@ output "notification_dead_letter_queue_url" {
   description = "URL of the SQS queue that keeps the notifications EventBridge failed to deliver to Slack."
   value       = module.notification.dead_letter_queue_url
 }
+
+output "notification_slack_bot_token_parameter_name" {
+  description = "Name of the SSM parameter for the Slack bot token of the notification Lambda. Set the real token to it with aws ssm put-parameter --overwrite."
+  value       = module.notification.slack_bot_token_parameter_name
+}
+
+output "notification_log_group_name" {
+  description = "Name of the CloudWatch log group for the notification Lambda."
+  value       = module.notification.notifier_log_group_name
+}
