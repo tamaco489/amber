@@ -38,6 +38,20 @@ Spec: [Amazon ECS service deployment state change events (AWS)](https://docs.aws
 - Failed deliveries are retried for up to 1 hour and 10 attempts. If they still fail, they go to the dead-letter queue
 - None of these cost anything while idle (billed per invocation or request). So they are not removed by `enable_runtime` and always exist. The cost of the connection's token (Secrets Manager) is included in the API destination charge
 
+### Base resources for the upcoming Lambda
+
+The notifications will move to a Lambda (Go) that groups them into one thread per deployment. The resources it uses already exist, but no function is deployed yet and the current notifications do not change.
+
+| Resource                                                  | Role                                                                                           |
+| --------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| DynamoDB table `prd-amber-notification`                   | Per-deployment parent posts and per-step markers (key: `pk`). On-demand, TTL (`expires_at`)    |
+| SSM parameter `/prd-amber/notification/slack-bot-token`   | Slack bot token (standard `SecureString`). Created with a dummy value; set the real one by CLI |
+| IAM role `prd-amber-notification-lambda`                  | Execution role: the table, the parameter, the log group, and sending to the dead-letter queue  |
+| CloudWatch log group `/aws/lambda/prd-amber-notification` | Logs of the function `prd-amber-notification`, kept for 3 days                                 |
+
+- Terraform writes the parameter with the write-only `value_wo`, so the real token put by the CLI never reaches the state
+- These also cost $0 while idle, so they are not removed by `enable_runtime`
+
 ## Set the bot token
 
 Terraform creates the connection with a dummy token, so that the real token is not stored in the state.
