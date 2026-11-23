@@ -45,8 +45,8 @@ func TestNotify(t *testing.T) {
 			},
 			wantReplies: []reply{
 				{header: ":rocket: Deploy started: v3", color: slack.ColorInfo},
-				{header: ":hourglass_flowing_sand: Deployment in progress", color: slack.ColorWarning},
-				{header: ":white_check_mark: Deployment completed", color: slack.ColorSuccess},
+				{header: ":hourglass_flowing_sand: Deployment in progress: prd-amber-api", color: slack.ColorWarning},
+				{header: ":white_check_mark: Deployment completed: prd-amber-api", color: slack.ColorSuccess},
 			},
 		},
 		"進行中が開始より先に届く": {
@@ -55,7 +55,7 @@ func TestNotify(t *testing.T) {
 			wantColor:  slack.ColorNeutral,
 			wantBody:   []string{"*Status*\nDeploying", "*Triggered by*\ntamaco489"},
 			wantReplies: []reply{
-				{header: ":hourglass_flowing_sand: Deployment in progress", color: slack.ColorWarning},
+				{header: ":hourglass_flowing_sand: Deployment in progress: prd-amber-api", color: slack.ColorWarning},
 				{header: ":rocket: Deploy started: v3", color: slack.ColorInfo},
 			},
 		},
@@ -66,7 +66,7 @@ func TestNotify(t *testing.T) {
 			wantColor:  slack.ColorNeutral,
 			wantBody:   []string{"*Triggered by*\nnone", "<" + testECSURL + "|ECS deployment>   GitHub Actions run: none"},
 			wantReplies: []reply{
-				{header: ":hourglass_flowing_sand: Deployment in progress", color: slack.ColorWarning},
+				{header: ":hourglass_flowing_sand: Deployment in progress: prd-amber-api", color: slack.ColorWarning},
 			},
 		},
 		"開始が先に届いた親に、進行中で ECS のリンクを足す": {
@@ -77,7 +77,7 @@ func TestNotify(t *testing.T) {
 			wantBody:   []string{"<" + testECSURL + "|ECS deployment>   <" + testRunURL + "|GitHub Actions run>"},
 			wantReplies: []reply{
 				{header: ":rocket: Deploy started: v3", color: slack.ColorInfo},
-				{header: ":hourglass_flowing_sand: Deployment in progress", color: slack.ColorWarning},
+				{header: ":hourglass_flowing_sand: Deployment in progress: prd-amber-api", color: slack.ColorWarning},
 			},
 		},
 		"ECS のデプロイを引けなくても、通知は続け、リンクを none にする": {
@@ -88,8 +88,8 @@ func TestNotify(t *testing.T) {
 			wantBody:   []string{"ECS deployment: none   <" + testRunURL + "|GitHub Actions run>"},
 			wantReplies: []reply{
 				{header: ":rocket: Deploy started: v3", color: slack.ColorInfo},
-				{header: ":hourglass_flowing_sand: Deployment in progress", color: slack.ColorWarning},
-				{header: ":white_check_mark: Deployment completed", color: slack.ColorSuccess},
+				{header: ":hourglass_flowing_sand: Deployment in progress: prd-amber-api", color: slack.ColorWarning},
+				{header: ":white_check_mark: Deployment completed: prd-amber-api", color: slack.ColorSuccess},
 			},
 		},
 		"ロールバック": {
@@ -99,8 +99,8 @@ func TestNotify(t *testing.T) {
 			wantBody:   []string{"*Status*\nRolling back"},
 			wantReplies: []reply{
 				{header: ":rocket: Deploy started: v3", color: slack.ColorInfo},
-				{header: ":hourglass_flowing_sand: Deployment in progress", color: slack.ColorWarning},
-				{header: ":rewind: Rollback started", color: slack.ColorDanger},
+				{header: ":hourglass_flowing_sand: Deployment in progress: prd-amber-api", color: slack.ColorWarning},
+				{header: ":rewind: Rollback started: prd-amber-api", color: slack.ColorDanger},
 			},
 		},
 		"失敗": {
@@ -110,8 +110,8 @@ func TestNotify(t *testing.T) {
 			wantBody:   []string{"*Status*\nFailed"},
 			wantReplies: []reply{
 				{header: ":rocket: Deploy started: v3", color: slack.ColorInfo},
-				{header: ":rewind: Rollback started", color: slack.ColorDanger},
-				{header: ":x: Deployment failed", color: slack.ColorDanger},
+				{header: ":rewind: Rollback started: prd-amber-api", color: slack.ColorDanger},
+				{header: ":x: Deployment failed: prd-amber-api", color: slack.ColorDanger},
 			},
 		},
 	}
