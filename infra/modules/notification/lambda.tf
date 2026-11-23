@@ -16,7 +16,7 @@ resource "aws_cloudwatch_log_group" "notifier" {
 
 # 通知の Lambda の実行ロール
 #   - 信頼条件: Lambda から。ロールを関数に付けられるのは、このアカウントで iam:PassRole を持つものだけ
-#   - 権限: 状態のテーブルの読み書き、ボットトークンの読み取り、ログの書き込み、失敗したときのデッドレターキューへの送信
+#   - 権限: 状態のテーブルの読み書き、ボットトークンの読み取り、ログの書き込み、失敗したときのデッドレターキューへの送信、ECS のサービスデプロイの一覧
 resource "aws_iam_role" "notifier" {
   name               = "${local.name_prefix}-notification-lambda"
   assume_role_policy = data.aws_iam_policy_document.notifier_trust.json
@@ -76,6 +76,16 @@ data "aws_iam_policy_document" "notifier" {
     sid       = "SendToDeadLetterQueue"
     actions   = ["sqs:SendMessage"]
     resources = [aws_sqs_queue.dead_letter.arn]
+  }
+
+  # 親の投稿に ECS のデプロイのページへのリンクを付けるため、サービスデプロイを引く (backend/internal/ecs)
+  #   - ECS のイベントの deploymentId (ecs-svc/...) はサービスデプロイの ID とは別のため、一覧から探す
+  #   - ListServiceDeployments の対象のリソースはサービスのため、通知の対象のサービスだけに絞る
+  # DOC: https://docs.aws.amazon.com/service-authorization/latest/reference/list_ecs.html
+  statement {
+    sid       = "ListServiceDeployments"
+    actions   = ["ecs:ListServiceDeployments"]
+    resources = [local.ecs_service_arn]
   }
 }
 
