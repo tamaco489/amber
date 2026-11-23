@@ -1,6 +1,9 @@
 locals {
   name_prefix = "${var.env}-amber"
 
+  # 通知の Lambda の関数名 (関数は後から置く。ロググループの名前に使うため、先に決める)
+  notifier_function_name = "${local.name_prefix}-notification"
+
   account_id = data.aws_caller_identity.current.account_id
   region     = data.aws_region.current.region
 

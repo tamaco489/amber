@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# 通知: EventBridge のルール・接続・API 送信先、デッドレターキュー、接続のシークレット (置いておくだけなら無料)
+# 通知: EventBridge のルール・接続・API 送信先、デッドレターキュー、接続のシークレット、
+#       通知の Lambda の状態のテーブルとボットトークンのパラメータ (置いておくだけなら無料)
 set -uo pipefail
 source "$(dirname "$0")/../lib.sh"
 require_amber_account
@@ -25,5 +26,17 @@ fi
 section "Secrets Manager: prd-amber を含むシークレット (接続のもの 1 つだけ。料金は API 送信先に含まれる)"
 query '[.SecretList[] | select(.Name | contains("prd-amber")) | {name: (.Name | sub("/[0-9a-f-]+$"; "/<id>")), owner: .OwningService}] | sort_by(.name)' \
     aws secretsmanager list-secrets
+
+section "DynamoDB: prd-amber を含むテーブル (通知の状態のテーブル 1 つだけ。オンデマンド)"
+query '[.TableNames[] | select(contains("prd-amber"))]' \
+    aws dynamodb list-tables
+for table in $(aws dynamodb list-tables --output json 2>/dev/null | jq -r '.TableNames[] | select(contains("prd-amber"))'); do
+    query '{name: .Table.TableName, billing: .Table.BillingModeSummary.BillingMode}' \
+        aws dynamodb describe-table --table-name "$table"
+done
+
+section "SSM: /prd-amber/ のパラメータ (ボットトークン 1 つだけ。標準)"
+query '[.Parameters[] | {name: .Name, type: .Type, tier: .Tier}] | sort_by(.name)' \
+    aws ssm describe-parameters --parameter-filters Key=Name,Option=BeginsWith,Values=/prd-amber/
 
 finish
