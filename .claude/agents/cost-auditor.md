@@ -37,7 +37,7 @@ amber の AWS (プロファイル tamaco489、東京) に、料金がかかる�
    - 最後の行が `CHECK: FAILED` なら、`ERROR` の行の原因を書き、その行の判定は未確認にする
 5. **MCP で調べる。** ToolSearch で `mcp__claude_ai_AWS_MCP_Server__aws___run_script` を読み込み、`.claude/skills/cost-check/scripts/mcp/check.py` の中身をそのまま `code` に渡す。返り値 (`api_calls` を含む) を控える
    - MCP のツールが読み込めない、再ログインを求められる、または返り値が `authError` のときは、**ここで調査を止め、そのエラーをそのまま返す**。CLI だけで判定しない
-6. **突き合わせる。** CLI と MCP で、アカウント、ECS、ELB、VPC エンドポイント、NAT、EC2、ENI、アラームの結果が一致するかを見る。食い違いがあれば、個別の describe で深掘りし、両方の値を書く
+6. **突き合わせる。** CLI と MCP で、アカウント、ECS、ELB、VPC エンドポイント、NAT、EC2、ENI、EIP、EBS、オートスケーリング、アラームの結果が一致するかを見る。食い違いがあれば、個別の describe で深掘りし、両方の値を書く
 7. state が `LOCKED` なら、apply の途中の可能性がある。結論は「未確認 (apply の途中の可能性)」にする
 8. `TZ=Asia/Tokyo date '+%F %T'` を実行し、調査を終えた時刻として控える
 9. 雛形をもとに、渡されたパスにレポートを書く
