@@ -44,7 +44,7 @@ The notifications will move to a Lambda (Go) that groups them into one thread pe
 
 | Resource                                                  | Role                                                                                           |
 | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| DynamoDB table `prd-amber-notification`                   | Per-deployment state (key: deployment ID). On-demand, old items expire by TTL (`expires_at`)   |
+| DynamoDB table `prd-amber-notification`                   | Per-deployment parent posts and per-step markers (key: `pk`). On-demand, TTL (`expires_at`)    |
 | SSM parameter `/prd-amber/notification/slack-bot-token`   | Slack bot token (standard `SecureString`). Created with a dummy value; set the real one by CLI |
 | IAM role `prd-amber-notification-lambda`                  | Execution role: the table, the parameter, the log group, and sending to the dead-letter queue  |
 | CloudWatch log group `/aws/lambda/prd-amber-notification` | Logs of the function `prd-amber-notification`, kept for 3 days                                 |

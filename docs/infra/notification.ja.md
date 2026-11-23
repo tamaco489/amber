@@ -42,12 +42,12 @@ EventBridge のルールがイベントを拾い、API 送信先で Slack の `c
 
 通知は、デプロイごとに 1 つのスレッドにまとめる Lambda (Go) に移ります。Lambda が使うリソースは先に置いてありますが、関数はまだ置いておらず、今の通知は変わりません。
 
-| リソース                                                       | 役割                                                                                           |
-| -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| DynamoDB のテーブル `prd-amber-notification`                   | デプロイごとの状態 (キーはデプロイ ID)。オンデマンドで、古い項目は TTL (`expires_at`) で消える |
-| SSM のパラメータ `/prd-amber/notification/slack-bot-token`     | Slack のボットトークン (標準の `SecureString`)。ダミー値で作り、本物の値は CLI で入れる        |
-| IAM ロール `prd-amber-notification-lambda`                     | 実行ロール。テーブル、パラメータ、ロググループ、デッドレターキューへの送信                     |
-| CloudWatch のロググループ `/aws/lambda/prd-amber-notification` | 関数 `prd-amber-notification` のログを 3 日残す                                                |
+| リソース                                                       | 役割                                                                                                    |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| DynamoDB のテーブル `prd-amber-notification`                   | デプロイごとの親の投稿と、手順ごとの済んだ印 (キーは `pk`)。オンデマンドで、TTL (`expires_at`) で消える |
+| SSM のパラメータ `/prd-amber/notification/slack-bot-token`     | Slack のボットトークン (標準の `SecureString`)。ダミー値で作り、本物の値は CLI で入れる                 |
+| IAM ロール `prd-amber-notification-lambda`                     | 実行ロール。テーブル、パラメータ、ロググループ、デッドレターキューへの送信                              |
+| CloudWatch のロググループ `/aws/lambda/prd-amber-notification` | 関数 `prd-amber-notification` のログを 3 日残す                                                         |
 
 - Terraform は、パラメータを書き込み専用の `value_wo` で書くため、CLI で入れた本物のトークンは state に入りません
 - これらも置いておくだけなら $0 のため、`enable_runtime` では消しません
