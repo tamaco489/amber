@@ -17,6 +17,7 @@ module "github_oidc" {
 
   deploy_event_source      = module.notification.deploy_event_source
   deploy_event_detail_type = module.notification.deploy_event_detail_type
+  notifier_function_arn    = module.notification.notifier_function_arn
 }
 
 module "ecr_api" {

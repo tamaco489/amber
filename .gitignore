@@ -17,3 +17,6 @@ crash.*.log
 
 # Python のバイトコード (フックの実行や構文の検査で作られる)
 __pycache__/
+
+# Claude Code のサブエージェントが作る、作業用のコピー (git worktree)
+.claude/worktrees/

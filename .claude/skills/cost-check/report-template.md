@@ -44,6 +44,7 @@
 | 無料             | Secrets Manager (`events!connection/...`)    | 接続のもの 1 つだけ                                       |      |      |          |      |
 | 無料             | DynamoDB の通知の状態のテーブル              | 1 つだけで、`PAY_PER_REQUEST`                             |      |      |          |      |
 | 無料             | SSM のボットトークンのパラメータ             | 1 つだけで、`Standard`                                    |      |      |          |      |
+| 無料             | 通知の Lambda の関数                         | 1 つだけで、`provided.al2023`、`arm64` (まだないのもよい) |      |      |          |      |
 
 ## 期待と違ったもの
 

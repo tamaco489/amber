@@ -38,17 +38,18 @@ ECS refers to the ALB rules and target groups, and pulls images and sends logs t
 
 ## What stays regardless of the switch
 
-| Resource                                                                                        | Cost                                                                                                                   |
-| ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| VPC, subnets, IGW, route tables, security groups                                                | free                                                                                                                   |
-| S3 gateway endpoint                                                                             | free                                                                                                                   |
-| ECR repository (`prd-amber-api`)                                                                | $0.10 per GB-month; images are a few MB, so almost $0                                                                  |
-| IAM role for plan (`prd-amber-github-actions-plan`)                                             | free                                                                                                                   |
-| IAM role for deploy (`prd-amber-github-actions-deploy`)                                         | free                                                                                                                   |
-| Prefix list for the test listener (managed outside Terraform)                                   | free                                                                                                                   |
-| tfstate bucket (`prd-amber-tfstate`)                                                            | a lifecycle rule keeps up to 10 old versions ([Lifecycle of the tfstate bucket](./tfstate.md)); a few MB, so almost $0 |
-| Deployment notifications (EventBridge rules, connection, API destination, SQS queue, IAM role)  | billed per invocation and request only; $0 while idle ([Deployment notifications to Slack](./notification.md))         |
-| Base resources for the notification Lambda (DynamoDB table, SSM parameter, IAM role, log group) | the table is on-demand and the parameter is standard, so $0 while idle; logs expire after 3 days, so nearly $0         |
+| Resource                                                                                       | Cost                                                                                                                                                            |
+| ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| VPC, subnets, IGW, route tables, security groups                                               | free                                                                                                                                                            |
+| S3 gateway endpoint                                                                            | free                                                                                                                                                            |
+| ECR repository (`prd-amber-api`)                                                               | $0.10 per GB-month; images are a few MB, so almost $0                                                                                                           |
+| IAM role for plan (`prd-amber-github-actions-plan`)                                            | free                                                                                                                                                            |
+| IAM role for deploy (`prd-amber-github-actions-deploy`)                                        | free                                                                                                                                                            |
+| IAM role for deploying the notification Lambda (`prd-amber-github-actions-notifier`)           | free                                                                                                                                                            |
+| Prefix list for the test listener (managed outside Terraform)                                  | free                                                                                                                                                            |
+| tfstate bucket (`prd-amber-tfstate`)                                                           | a lifecycle rule keeps up to 10 old versions ([Lifecycle of the tfstate bucket](./tfstate.md)); a few MB, so almost $0                                          |
+| Deployment notifications (EventBridge rules, connection, API destination, SQS queue, IAM role) | billed per invocation and request only; $0 while idle ([Deployment notifications to Slack](./notification.md))                                                  |
+| Notification Lambda (function, DynamoDB table, SSM parameter, IAM role, log group)             | the function is billed per request and duration, the table is on-demand and the parameter is standard, so $0 while idle; logs expire after 3 days, so nearly $0 |
 
 While stopped, the cost is almost $0 (under one cent per month).
 

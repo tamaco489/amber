@@ -5,7 +5,7 @@
 [ドキュメント一覧](../README.ja.md) に戻る。
 
 デプロイの状態の変化を、Slack のチャンネル `#amber-prd-deploy` に投稿します。
-EventBridge のルールがイベントを拾い、API 送信先で Slack の `chat.postMessage` を呼びます。Lambda は使いません。
+EventBridge のルールがイベントを拾い、API 送信先で Slack の `chat.postMessage` を呼びます。通知の Lambda は置いてありますが、まだルールのターゲットにしていません。
 定義は `infra/modules/notification/` にあります。
 
 ## 通知する内容
@@ -38,18 +38,25 @@ EventBridge のルールがイベントを拾い、API 送信先で Slack の `c
 - 届けられなかったときは、1 時間まで、最大 10 回まで再試行します。それでも届かなければ、デッドレターキューに入ります
 - どれも、置いておくだけでは料金がかかりません (呼び出しやリクエストごとの課金)。そのため `enable_runtime` で消さず、常に置きます。接続のトークンの料金 (Secrets Manager) は、API 送信先の料金に含まれます
 
-### これから置く Lambda の土台
+### 通知の Lambda (切り替えの前)
 
-通知は、デプロイごとに 1 つのスレッドにまとめる Lambda (Go) に移ります。Lambda が使うリソースは先に置いてありますが、関数はまだ置いておらず、今の通知は変わりません。
+通知は、デプロイごとに 1 つのスレッドにまとめる Lambda (Go) に移ります。関数と、関数が使うリソースは置いてありますが、ルールのターゲットはまだ API 送信先のままで、今の通知は変わりません。
 
-| リソース                                                       | 役割                                                                                                    |
-| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| DynamoDB のテーブル `prd-amber-notification`                   | デプロイごとの親の投稿と、手順ごとの済んだ印 (キーは `pk`)。オンデマンドで、TTL (`expires_at`) で消える |
-| SSM のパラメータ `/prd-amber/notification/slack-bot-token`     | Slack のボットトークン (標準の `SecureString`)。ダミー値で作り、本物の値は CLI で入れる                 |
-| IAM ロール `prd-amber-notification-lambda`                     | 実行ロール。テーブル、パラメータ、ロググループ、デッドレターキューへの送信                              |
-| CloudWatch のロググループ `/aws/lambda/prd-amber-notification` | 関数 `prd-amber-notification` のログを 3 日残す                                                         |
+| リソース                                                       | 役割                                                                                                                                      |
+| -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| DynamoDB のテーブル `prd-amber-notification`                   | デプロイごとの親の投稿と、手順ごとの済んだ印 (キーは `pk`)。オンデマンドで、TTL (`expires_at`) で消える                                   |
+| SSM のパラメータ `/prd-amber/notification/slack-bot-token`     | Slack のボットトークン (標準の `SecureString`)。ダミー値で作り、本物の値は CLI で入れる                                                   |
+| IAM ロール `prd-amber-notification-lambda`                     | 実行ロール。テーブル、パラメータ、ロググループ、デッドレターキューへの送信                                                                |
+| CloudWatch のロググループ `/aws/lambda/prd-amber-notification` | 関数 `prd-amber-notification` のログを 3 日残す                                                                                           |
+| Lambda の関数 `prd-amber-notification`                         | `provided.al2023`、`arm64`、128 MB、タイムアウト 30 秒。コードは `cd-notifier` が置く ([通知の Lambda のデプロイ](../cd/notifier.ja.md))  |
+| 関数の非同期の呼び出しの設定                                   | 関数がエラーを返したら 2 回まで再試行し、1 時間より古いものは捨てる。失敗したものはデッドレターキュー `prd-amber-notification-dlq` に送る |
+| IAM ロール `prd-amber-github-actions-notifier`                 | `cd-notifier` が引き受ける。`main` のトークンだけを信頼し、この関数のコードの置き換えだけができる                                         |
 
 - Terraform は、パラメータを書き込み専用の `value_wo` で書くため、CLI で入れた本物のトークンは state に入りません
+- Terraform は、関数を動かない仮のコードで作り、コードの変更は無視します。apply のあと、`cd-notifier` を流すまで関数は動きません
+- 関数のタイムアウト (30 秒) は、手順の印の期限 (`backend/internal/dynamodb` の 60 秒) より短くしています。長く動くと、再試行の呼び出しが同じ手順を並べて進めるためです
+- 関数がエラーを返しても (Slack が `ok: false` を返したときを含む)、EventBridge の再試行とデッドレターキューには乗りません。EventBridge は、Lambda が非同期の呼び出しを受け付けた時点で成功とみなすためです。そのため、再試行と失敗の送り先は Lambda の側で設定します
+- デッドレターキューのポリシーは、EventBridge のルールからの送信だけを許していますが、Lambda からの送信は実行ロールの許可で届きます (同じアカウントのため)
 - これらも置いておくだけなら $0 のため、`enable_runtime` では消しません
 
 ## ボットトークンを入れる
@@ -98,3 +105,5 @@ unset SLACK_BOT_TOKEN
 - [API destinations (AWS 公式)](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-api-destinations.html)
 - [How Amazon EventBridge uses AWS Secrets Manager (AWS 公式)](https://docs.aws.amazon.com/secretsmanager/latest/userguide/integrating_how-services-use-secrets_events.html)
 - [chat.postMessage (Slack 公式)](https://docs.slack.dev/reference/methods/chat.postMessage)
+- [Handling errors for asynchronous invocations (AWS 公式)](https://docs.aws.amazon.com/lambda/latest/dg/invocation-async-error-handling.html)
+- [Capturing records of Lambda asynchronous invocations (AWS 公式)](https://docs.aws.amazon.com/lambda/latest/dg/invocation-async-retain-records.html)

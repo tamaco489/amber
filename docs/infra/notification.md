@@ -5,7 +5,7 @@
 Back to the [documentation index](../README.md).
 
 Deployment state changes are posted to the Slack channel `#amber-prd-deploy`.
-EventBridge rules pick up the events, and an API destination calls Slack's `chat.postMessage`. No Lambda is used.
+EventBridge rules pick up the events, and an API destination calls Slack's `chat.postMessage`. The notification Lambda exists but is not a rule target yet.
 The definitions are in `infra/modules/notification/`.
 
 ## What is notified
@@ -38,18 +38,25 @@ Spec: [Amazon ECS service deployment state change events (AWS)](https://docs.aws
 - Failed deliveries are retried for up to 1 hour and 10 attempts. If they still fail, they go to the dead-letter queue
 - None of these cost anything while idle (billed per invocation or request). So they are not removed by `enable_runtime` and always exist. The cost of the connection's token (Secrets Manager) is included in the API destination charge
 
-### Base resources for the upcoming Lambda
+### Notification Lambda (before the switch)
 
-The notifications will move to a Lambda (Go) that groups them into one thread per deployment. The resources it uses already exist, but no function is deployed yet and the current notifications do not change.
+The notifications will move to a Lambda (Go) that groups them into one thread per deployment. The function and the resources it uses already exist, but the rule targets are still the API destination and the current notifications do not change.
 
-| Resource                                                  | Role                                                                                           |
-| --------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| DynamoDB table `prd-amber-notification`                   | Per-deployment parent posts and per-step markers (key: `pk`). On-demand, TTL (`expires_at`)    |
-| SSM parameter `/prd-amber/notification/slack-bot-token`   | Slack bot token (standard `SecureString`). Created with a dummy value; set the real one by CLI |
-| IAM role `prd-amber-notification-lambda`                  | Execution role: the table, the parameter, the log group, and sending to the dead-letter queue  |
-| CloudWatch log group `/aws/lambda/prd-amber-notification` | Logs of the function `prd-amber-notification`, kept for 3 days                                 |
+| Resource                                                  | Role                                                                                                                                                              |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| DynamoDB table `prd-amber-notification`                   | Per-deployment parent posts and per-step markers (key: `pk`). On-demand, TTL (`expires_at`)                                                                       |
+| SSM parameter `/prd-amber/notification/slack-bot-token`   | Slack bot token (standard `SecureString`). Created with a dummy value; set the real one by CLI                                                                    |
+| IAM role `prd-amber-notification-lambda`                  | Execution role: the table, the parameter, the log group, and sending to the dead-letter queue                                                                     |
+| CloudWatch log group `/aws/lambda/prd-amber-notification` | Logs of the function `prd-amber-notification`, kept for 3 days                                                                                                    |
+| Lambda function `prd-amber-notification`                  | `provided.al2023`, `arm64`, 128 MB, 30-second timeout. The code is deployed by `cd-notifier` ([Deploying the notification Lambda](../cd/notifier.md))             |
+| Asynchronous invocation config of the function            | Retries up to 2 times when the function returns an error and drops events older than 1 hour. Failed ones go to the dead-letter queue `prd-amber-notification-dlq` |
+| IAM role `prd-amber-github-actions-notifier`              | Assumed by `cd-notifier`. Trusts only tokens for `main` and can only replace the code of this function                                                            |
 
 - Terraform writes the parameter with the write-only `value_wo`, so the real token put by the CLI never reaches the state
+- Terraform creates the function with placeholder code that does not run and ignores code changes. The function does not work until `cd-notifier` runs after the apply
+- The function timeout (30 seconds) is shorter than the step lease (60 seconds in `backend/internal/dynamodb`). Running longer would let a retried invocation work on the same step in parallel
+- Errors returned by the function (including Slack returning `ok: false`) do not go through the EventBridge retries and dead-letter queue, because EventBridge counts the delivery as successful once Lambda accepts the asynchronous invocation. So the retries and the failure destination are set on the Lambda side
+- The dead-letter queue policy allows only the EventBridge rules, but sends from the Lambda get through with the permission on its execution role (same account)
 - These also cost $0 while idle, so they are not removed by `enable_runtime`
 
 ## Set the bot token
@@ -98,3 +105,5 @@ The token is set when `ConnectionState` is `AUTHORIZED`.
 - [API destinations (AWS)](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-api-destinations.html)
 - [How Amazon EventBridge uses AWS Secrets Manager (AWS)](https://docs.aws.amazon.com/secretsmanager/latest/userguide/integrating_how-services-use-secrets_events.html)
 - [chat.postMessage (Slack)](https://docs.slack.dev/reference/methods/chat.postMessage)
+- [Handling errors for asynchronous invocations (AWS)](https://docs.aws.amazon.com/lambda/latest/dg/invocation-async-error-handling.html)
+- [Capturing records of Lambda asynchronous invocations (AWS)](https://docs.aws.amazon.com/lambda/latest/dg/invocation-async-retain-records.html)
