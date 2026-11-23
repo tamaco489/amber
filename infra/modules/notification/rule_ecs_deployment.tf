@@ -71,7 +71,7 @@ resource "aws_cloudwatch_event_target" "ecs_deployment" {
       channel = var.slack_channel_id
       color   = each.value.color
       title   = each.value.title
-      service = "${local.name_prefix}-api"
+      service = local.ecs_service_name
     })
   }
 

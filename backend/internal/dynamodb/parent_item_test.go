@@ -31,7 +31,7 @@ func TestParentItemRoundTrip(t *testing.T) {
 		t.Errorf("pk = %q", got)
 	}
 	exp := item["expires_at"].(*types.AttributeValueMemberN).Value
-	if wantExp := testTime.Add(30 * 24 * time.Hour).Unix(); exp != strconv.FormatInt(wantExp, 10) {
+	if wantExp := testTime.Add(3 * 24 * time.Hour).Unix(); exp != strconv.FormatInt(wantExp, 10) {
 		t.Errorf("expires_at = %s, want %d", exp, wantExp)
 	}
 

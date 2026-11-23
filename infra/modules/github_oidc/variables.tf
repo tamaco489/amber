@@ -37,3 +37,8 @@ variable "deploy_event_detail_type" {
   description = "Detail type of the events that the deploy role may send to the default event bus when it starts a deployment."
   type        = string
 }
+
+variable "notifier_function_arn" {
+  description = "ARN of the notification Lambda function whose code the notifier deploy role may update."
+  type        = string
+}

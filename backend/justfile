@@ -51,6 +51,6 @@ push version env="prd": (build version)
 # notifier (デプロイの通知の Lambda) を linux/arm64 でビルドし、dist/notifier/bootstrap に置く
 #   - ランタイムは provided.al2023 のため、実行ファイルの名前は bootstrap にする
 #   - lambda.norpc は、provided のランタイムで使わない RPC のコードを外すタグ
-#   - AWS に置く手順は #53 で足す
+#   - AWS に置くのは cd-notifier のワークフロー (.github/workflows/scripts/cd-notifier/build.sh が同じ条件でビルドする)
 build-notifier:
     CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags "-s -w" -tags lambda.norpc -o dist/notifier/bootstrap ./cmd/notifier

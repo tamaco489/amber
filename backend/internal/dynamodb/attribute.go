@@ -12,7 +12,7 @@ const (
 	keyAttr          = "pk"
 	parentKeyPrefix  = "deployment#"
 	stepKeyPrefix    = "step#"
-	itemTTL          = 30 * 24 * time.Hour
+	itemTTL          = 3 * 24 * time.Hour
 	DefaultLeaseTime = 60 * time.Second
 )
 

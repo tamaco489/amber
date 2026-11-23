@@ -24,8 +24,13 @@ output "dead_letter_queue_arn" {
 }
 
 output "notifier_function_name" {
-  description = "Name of the notification Lambda function. The function itself is not created yet."
-  value       = local.notifier_function_name
+  description = "Name of the notification Lambda function. The cd-notifier workflow deploys its code."
+  value       = aws_lambda_function.notifier.function_name
+}
+
+output "notifier_function_arn" {
+  description = "ARN of the notification Lambda function."
+  value       = aws_lambda_function.notifier.arn
 }
 
 output "notifier_role_arn" {
