@@ -36,7 +36,7 @@ The findings are kept as material for choosing settings.
 ## Tools
 
 Tools used on local machines. Go, golangci-lint, Terraform, tflint and trivy are pinned in `.tool-versions` (asdf), which both local machines and CI read.
-actionlint and shellcheck are pinned in `ci-actions.yaml`. The others are not pinned; the versions shown are the ones confirmed to work.
+actionlint and shellcheck are pinned in `ci-actions.yaml`, and k6 by the container image in `loadtest/justfile`. The others are not pinned; the versions shown are the ones confirmed to work.
 
 | Tool          | Version | Used for                                                       |
 | ------------- | ------- | -------------------------------------------------------------- |
@@ -47,7 +47,7 @@ actionlint and shellcheck are pinned in `ci-actions.yaml`. The others are not pi
 | tflint        | 0.66.0  | Linting Terraform (including the AWS ruleset)                  |
 | trivy         | 0.76.2  | Scanning Terraform for misconfigurations                       |
 | AWS CLI       | 2.40.0  | Checking state, updating the prefix list, logging in to ECR    |
-| k6            | -       | Load testing during deployments                                |
+| k6            | 2.4.0   | Load testing during deployments (`loadtest/justfile`)          |
 | just          | 1.46.0  | Task recipes (`just backend::push`, `just infra::plan`, ...)   |
 | actionlint    | 1.7.12  | Linting GitHub Actions workflows (pinned in `ci-actions.yaml`) |
 | shellcheck    | 0.11.0  | Linting shell scripts (pinned in `ci-actions.yaml`)            |
@@ -62,4 +62,5 @@ actionlint and shellcheck are pinned in `ci-actions.yaml`. The others are not pi
 | [Deployment notifications to Slack](./infra/notification.md)  | How deployment start, progress, completion and failure are posted to Slack, and how to set the bot token           |
 | [Applying task definition changes](./cd/task-definition.md)   | Getting task definition changes made in Terraform onto the service with `cd-backend`                               |
 | [Checking workflows and scripts](./ci/workflow-lint.md)       | What `ci-actions` checks with actionlint and shellcheck, and how to run it locally                                 |
+| [Load testing during deployments (k6)](./loadtest/k6.md)      | Running k6 during a deployment and counting failures per kind and responses per version                            |
 | [Ruleset for v* tags](./github/tag-ruleset.md)                | Limiting who can create, update and delete `v*` tags (the deployment trigger) to admins                            |
