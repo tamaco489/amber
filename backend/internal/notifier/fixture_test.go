@@ -18,6 +18,7 @@ const (
 	testTaskDef    = "arn:aws:ecs:ap-northeast-1:111122223333:task-definition/prd-amber-api:7"
 	testRunURL     = "https://github.com/tamaco489/amber/actions/runs/1"
 	testParentTS   = "1700000000.000001"
+	testECSURL     = "https://ap-northeast-1.console.aws.amazon.com/ecs/v2/clusters/prd-amber/services/prd-amber-api/deployments/abc?region=ap-northeast-1"
 )
 
 // testTime は、テストのイベントの時刻 (JST では 2026-11-23 11:12:30)

@@ -60,7 +60,11 @@ func parseECS(raw events.CloudWatchEvent, ev *Event) (*Event, error) {
 	ev.Kind = ecsKind(kind, d.Reason)
 	ev.DeploymentID = d.DeploymentID
 	ev.Reason = d.Reason
-	if service := serviceFromARN(raw.Resources); service != "" {
+	if len(raw.Resources) == 0 {
+		return ev, nil
+	}
+	ev.ServiceARN = raw.Resources[0]
+	if service := serviceFromARN(ev.ServiceARN); service != "" {
 		ev.Service = service
 	}
 	return ev, nil
@@ -77,12 +81,8 @@ func ecsKind(kind Kind, reason string) Kind {
 	return KindRollback
 }
 
-// serviceFromARN は、resources[0] のサービスの ARN (arn:aws:ecs:<region>:<account>:service/<cluster>/<service>) から、サービスの名前を取り出す
-func serviceFromARN(resources []string) string {
-	if len(resources) == 0 {
-		return ""
-	}
-	arn := resources[0]
+// serviceFromARN は、サービスの ARN (arn:aws:ecs:<region>:<account>:service/<cluster>/<service>) から、サービスの名前を取り出す
+func serviceFromARN(arn string) string {
 	i := strings.LastIndex(arn, "/")
 	if i < 0 || i == len(arn)-1 {
 		return ""

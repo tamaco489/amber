@@ -168,3 +168,24 @@ func (s *fakeStore) PutParent(_ context.Context, p *deploy.Parent, _ time.Time) 
 	s.parents[p.DeploymentID] = *p
 	return nil
 }
+
+// ================================================================================
+// ECS の差し替え
+// ================================================================================
+
+type fakeECS struct {
+	mu    sync.Mutex
+	url   string // DeploymentURL が返す URL
+	err   error  // DeploymentURL が返すエラー
+	calls int    // DeploymentURL を呼んだ回数
+}
+
+func (f *fakeECS) DeploymentURL(_ context.Context, _ *deploy.Event) (string, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.calls++
+	if f.err != nil {
+		return "", f.err
+	}
+	return f.url, nil
+}

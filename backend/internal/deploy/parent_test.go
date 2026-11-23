@@ -65,3 +65,45 @@ func TestParentApply(t *testing.T) {
 		})
 	}
 }
+
+func TestParentApplyECSDeploymentURL(t *testing.T) {
+	const url = "https://ap-northeast-1.console.aws.amazon.com/ecs/v2/clusters/prd-amber/services/prd-amber-api/deployments/abc?region=ap-northeast-1"
+
+	tests := map[string]struct {
+		have        string // 親に入っている URL
+		evURL       string // イベントで引けた URL
+		wantURL     string
+		wantChanged bool
+	}{
+		"引けた URL で埋める": {
+			evURL:       url,
+			wantURL:     url,
+			wantChanged: true,
+		},
+		"引けなかったときは、入っている URL を消さない": {
+			have:    url,
+			wantURL: url,
+		},
+		"同じ URL なら変わらない": {
+			have:    url,
+			evURL:   url,
+			wantURL: url,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			p := deploy.Parent{DeploymentID: testDeployment, Service: testService, Status: deploy.StatusDeploying, ECSDeploymentURL: tt.have}
+			ev := &deploy.Event{Kind: deploy.KindInProgress, DeploymentID: testDeployment, Service: testService, ECSDeploymentURL: tt.evURL}
+
+			changed := p.Apply(ev)
+
+			if p.ECSDeploymentURL != tt.wantURL {
+				t.Errorf("url = %q, want %q", p.ECSDeploymentURL, tt.wantURL)
+			}
+			if changed != tt.wantChanged {
+				t.Errorf("changed = %v, want %v", changed, tt.wantChanged)
+			}
+		})
+	}
+}
