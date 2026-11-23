@@ -49,7 +49,6 @@ data "aws_iam_policy_document" "notifier" {
       "dynamodb:GetItem",
       "dynamodb:PutItem",
       "dynamodb:UpdateItem",
-      "dynamodb:DeleteItem",
     ]
     resources = [aws_dynamodb_table.notifier_state.arn]
   }
