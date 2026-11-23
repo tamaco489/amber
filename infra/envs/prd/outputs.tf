@@ -23,6 +23,11 @@ output "deploy_role_arn" {
   value       = module.github_oidc.deploy_role_arn
 }
 
+output "notifier_deploy_role_arn" {
+  description = "ARN of the IAM role for the cd-notifier deploy. Register it as the AWS_NOTIFIER_DEPLOY_ROLE_ARN repository variable."
+  value       = module.github_oidc.notifier_deploy_role_arn
+}
+
 output "api_repository_url" {
   description = "URL of the ECR repository for the api image."
   value       = module.ecr_api.repository_url
@@ -61,4 +66,9 @@ output "notification_slack_bot_token_parameter_name" {
 output "notification_log_group_name" {
   description = "Name of the CloudWatch log group for the notification Lambda."
   value       = module.notification.notifier_log_group_name
+}
+
+output "notification_function_name" {
+  description = "Name of the notification Lambda function. The cd-notifier workflow deploys its code."
+  value       = module.notification.notifier_function_name
 }
