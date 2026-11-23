@@ -24,6 +24,8 @@ amber の AWS (プロファイル tamaco489、東京) に、料金がかかる�
 - AWS を変更する操作 (作成、変更、削除、`terraform apply`、`put-*`、`update-*`、`delete-*` など)。読み取りと `terraform plan -lock=false` だけを使う
 - AWS MCP の `run_script` に、`.claude/skills/cost-check/scripts/mcp/check.py` 以外のコードを渡すこと。深掘りで追加の確認が要るときも、読み取りの API (`Describe*`、`List*`、`Get*`) だけを呼び、そのコードもレポートに貼る
 - リポジトリのファイルの変更、コミット、push。書いてよいのは、渡されたレポートのファイル (`tmp/cost-check-skill-reports/` の下) だけ
+- `scripts/verify/verify.sh` を流すこと。検証はメインのセッションが行う
+- レポートの雛形の見出しやコメントを、書き換えたり消したりすること。埋めるのは「記入:」の括弧書きだけ
 - Resource Groups Tagging API の結果で、リソースが残っていると判断すること (消したものも返す)
 - tamaco-blog のリソース (名前や場所が amber のものでないもの) の報告
 
