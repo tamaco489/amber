@@ -23,17 +23,18 @@ Spec: [Amazon ECS service deployment state change events (AWS)](https://docs.aws
 
 ## Resources
 
-| Resource                                       | Role                                                                                           |
-| ---------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Connection `prd-amber-slack`                   | Adds the bot token as the `Authorization: Bearer ...` header                                   |
-| API destination `prd-amber-slack-post-message` | Calls `chat.postMessage`, at most once per second                                              |
-| Rule `prd-amber-ecs-deployment`                | Picks up ECS deployment state changes (default event bus)                                      |
-| Rule `prd-amber-deploy-started`                | Picks up the events `cd-backend` sends (`amber.cd-backend` / `Deployment Started`)             |
-| IAM role `prd-amber-notification-invoke`       | Lets EventBridge call the API destination. Trusts only the notification rules                  |
-| SQS queue `prd-amber-notification-dlq`         | Keeps notifications that could not be delivered after retries, for 14 days (dead-letter queue) |
-| `events:PutEvents` on the deploy role          | `cd-backend` can send only events with the `source` and `detail-type` above                    |
+| Resource                                                        | Role                                                                                          |
+| --------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Connection `prd-amber-slack`                                    | Adds the bot token as the `Authorization: Bearer ...` header                                  |
+| API destination `prd-amber-slack-post-message`                  | Calls `chat.postMessage`, at most once per second                                             |
+| Rules `prd-amber-ecs-deployment-{in-progress,completed,failed}` | Pick up ECS deployment state changes, one rule per `eventName` (default event bus)            |
+| Rule `prd-amber-deploy-started`                                 | Picks up the events `cd-backend` sends (`amber.cd-backend` / `Deployment Started`)            |
+| IAM role `prd-amber-notification-invoke`                        | Lets EventBridge call the API destination. Trusts only the notification rules                 |
+| SQS queue `prd-amber-notification-dlq`                          | Keeps notifications that could not be delivered after retries, for 3 days (dead-letter queue) |
+| `events:PutEvents` on the deploy role                           | `cd-backend` can send only events with the `source` and `detail-type` above                   |
 
-- The message is built as `{"channel": ..., "text": ...}` JSON by the input transformer of each rule target
+- The message is built as Slack Block Kit JSON by the input transformer of each rule target. It goes in `attachments` to get a color bar (started: blue, in progress: yellow, completed: green, failed: red)
+- The ECS rules are split by `eventName` to change the color and heading. `eventName` is a fixed value, so it is safe to filter on
 - Failed deliveries are retried for up to 1 hour and 10 attempts. If they still fail, they go to the dead-letter queue
 - None of these cost anything while idle (billed per invocation or request). So they are not removed by `enable_runtime` and always exist. The cost of the connection's token (Secrets Manager) is included in the API destination charge
 

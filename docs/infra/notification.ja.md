@@ -23,17 +23,18 @@ EventBridge のルールがイベントを拾い、API 送信先で Slack の `c
 
 ## 構成
 
-| リソース                                   | 役割                                                                                   |
-| ------------------------------------------ | -------------------------------------------------------------------------------------- |
-| 接続 `prd-amber-slack`                     | ボットトークンを `Authorization: Bearer ...` のヘッダーで付ける                        |
-| API 送信先 `prd-amber-slack-post-message`  | `chat.postMessage` を、1 秒に 1 回までの頻度で呼ぶ                                     |
-| ルール `prd-amber-ecs-deployment`          | ECS のデプロイの状態の変化を拾う (default のイベントバス)                              |
-| ルール `prd-amber-deploy-started`          | `cd-backend` が送るイベント (`amber.cd-backend` / `Deployment Started`) を拾う         |
-| IAM ロール `prd-amber-notification-invoke` | EventBridge が API 送信先を呼ぶ。信頼するのは通知のルールだけ                          |
-| SQS キュー `prd-amber-notification-dlq`    | 再試行しても届けられなかった通知を 14 日残す (デッドレターキュー)                      |
-| deploy 用のロールの `events:PutEvents`     | `cd-backend` から送れるのは、上の `source` と `detail-type` の組み合わせのイベントだけ |
+| リソース                                                         | 役割                                                                                   |
+| ---------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| 接続 `prd-amber-slack`                                           | ボットトークンを `Authorization: Bearer ...` のヘッダーで付ける                        |
+| API 送信先 `prd-amber-slack-post-message`                        | `chat.postMessage` を、1 秒に 1 回までの頻度で呼ぶ                                     |
+| ルール `prd-amber-ecs-deployment-{in-progress,completed,failed}` | ECS のデプロイの状態の変化を、`eventName` ごとに拾う (default のイベントバス)          |
+| ルール `prd-amber-deploy-started`                                | `cd-backend` が送るイベント (`amber.cd-backend` / `Deployment Started`) を拾う         |
+| IAM ロール `prd-amber-notification-invoke`                       | EventBridge が API 送信先を呼ぶ。信頼するのは通知のルールだけ                          |
+| SQS キュー `prd-amber-notification-dlq`                          | 再試行しても届けられなかった通知を 3 日残す (デッドレターキュー)                       |
+| deploy 用のロールの `events:PutEvents`                           | `cd-backend` から送れるのは、上の `source` と `detail-type` の組み合わせのイベントだけ |
 
-- 本文は、ルールのターゲットの入力変換で `{"channel": ..., "text": ...}` の JSON に組みます
+- 本文は、ルールのターゲットの入力変換で、Slack の Block Kit の JSON に組みます。色の帯を付けるため `attachments` に入れます (開始: 青、進行中: 黄、完了: 緑、失敗: 赤)
+- ECS のルールを `eventName` ごとに分けるのは、色と見出しを変えるためです。`eventName` は決まった値なので、絞り込みに使えます
 - 届けられなかったときは、1 時間まで、最大 10 回まで再試行します。それでも届かなければ、デッドレターキューに入ります
 - どれも、置いておくだけでは料金がかかりません (呼び出しやリクエストごとの課金)。そのため `enable_runtime` で消さず、常に置きます。接続のトークンの料金 (Secrets Manager) は、API 送信先の料金に含まれます
 
