@@ -12,7 +12,7 @@ section "ECS: ACTIVE なタスク定義 (無料)"
 query '[.taskDefinitionArns[] | split("/")[1]] | sort_by(split(":")[1] | tonumber)' \
     aws ecs list-task-definitions --family-prefix prd-amber-api --status ACTIVE
 
-section "S3: tfstate のバケットの key ごとの古い版の数 (10 個以下なら OK、超えていたら NG。料金はほぼ $0 で、止める操作は要らない)"
+section "S3: tfstate のバケットの key ごとの古い版の数 (10 個以下なら OK、超えていたら NG。料金はほぼ \$0 で、止める操作は要らない)"
 query '[(.Versions // [])[], (.DeleteMarkers // [])[] | select(.IsLatest | not) | .Key] | group_by(.) | map({key: .[0], noncurrent: length})' \
     aws s3api list-object-versions --bucket prd-amber-tfstate
 
