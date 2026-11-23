@@ -42,7 +42,7 @@ resource "aws_iam_role_policy" "deploy" {
 
 # リソースに * を使うのは、リソースを絞れない API (GetAuthorizationToken、DescribeTaskDefinition) だけにする
 # ほかはリポジトリ、タスク定義のファミリー、サービス、ロールの ARN に絞る
-# Ref: https://docs.aws.amazon.com/service-authorization/latest/reference/list_ecs.html
+# DOC: https://docs.aws.amazon.com/service-authorization/latest/reference/list_ecs.html
 data "aws_iam_policy_document" "deploy" {
   # ECR へのログイン (リソースを指定できない API)
   statement {
