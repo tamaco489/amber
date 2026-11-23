@@ -47,6 +47,30 @@ jobs:
           working-directory: backend
 
   # ============================================================
+  # gopls check
+  # ============================================================
+  # golangci-lint に入っていない gopls の解析 (writestring など) を流す
+  # 警告が 1 件でもあると失敗する (処理は backend/scripts/gopls-check.sh)
+  # gopls のバージョンは .tool-versions で管理できないため、ここで固定する
+  backend-gopls:
+    runs-on: ubuntu-latest
+    env:
+      GOPLS_VERSION: v0.24.0
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.mod
+
+      - name: Install gopls
+        run: go install "golang.org/x/tools/gopls@${GOPLS_VERSION}"
+
+      - name: Run gopls check
+        run: scripts/gopls-check.sh
+
+  # ============================================================
   # test
   # ============================================================
   # go test を -race 付きで実行する
