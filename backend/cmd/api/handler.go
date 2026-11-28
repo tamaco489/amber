@@ -14,6 +14,7 @@ func newMux(version string) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", handleHealth)
 	mux.HandleFunc("GET /{$}", handleVersion(version))
+	mux.HandleFunc("POST /v1/carts/{cart_id}/checkout", handleCheckout(version))
 	return mux
 }
 
