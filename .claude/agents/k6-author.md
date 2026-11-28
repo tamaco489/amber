@@ -19,7 +19,7 @@ tools: Bash, Read, Write, Edit, Glob, Grep, WebFetch
 
 > [!IMPORTANT]
 >
-> - **即時性よりも正確さを優先する。** k6 の API やオプションは、記憶で書かず、公式ドキュメント (`https://grafana.com/docs/k6/latest/`) で確かめてから使う。使う版は `loadtest/justfile` の `k6_image`
+> - **即時性よりも正確さを優先する。** k6 の API やオプションは、記憶で書かず、公式ドキュメント (`https://grafana.com/docs/k6/latest/`) で確かめてから使う。使う版は `loadtest/Dockerfile` の `FROM` の行 (`loadtest/justfile` の `k6_image` が読む)
 > - ドキュメントで確かめられない動きは、手元のコンテナで流して確かめる。確かめられなければ「未確認」と報告に書く
 > - 頼まれた範囲だけを変える。今使わないものを先回りして作らない
 

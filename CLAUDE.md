@@ -19,17 +19,18 @@ AWS (東京) に Terraform で構築し、小さな Go のアプリを動かす�
 
 `docs/` は規約ではなく現状の説明を持つ。**構成を変更したら一緒に更新する。** 英語 (`.md`) と日本語 (`.ja.md`) の両方を揃える。
 
-| ドキュメント                                                   | 内容                                                                                      | 更新する条件                                          |
-| -------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| [docs/README.ja.md](docs/README.ja.md)                         | ドキュメントの索引                                                                        | 文書を追加・移動したとき                              |
-| [docs/infra/runtime.ja.md](docs/infra/runtime.ja.md)           | `enable_runtime` で時間課金のリソースを止める運用                                         | `enable_runtime` で作る・消すリソースを増減させたとき |
-| [docs/infra/tfstate.ja.md](docs/infra/tfstate.ja.md)           | tfstate のバケットのライフサイクル (`infra/tfstate/lifecycle.json`) と入れる手順          | `infra/tfstate/lifecycle.json` を変えたとき           |
-| [docs/infra/notification.ja.md](docs/infra/notification.ja.md) | デプロイの Slack への通知 (`modules/notification/`) とボットトークンを入れる手順          | 通知の内容・ルール・送り先を変えたとき                |
-| [docs/cd/task-definition.ja.md](docs/cd/task-definition.ja.md) | Terraform で変えたタスク定義を、`cd-backend` でサービスに届ける手順                       | `cd-backend` の複製元を変えたとき                     |
-| [docs/cd/notifier.ja.md](docs/cd/notifier.ja.md)               | 通知の Lambda のコードを置く `cd-notifier` (動くとき、ロール、手順、流し直し)             | `cd-notifier` の動くとき・ロール・手順を変えたとき    |
-| [docs/ci/workflow-lint.ja.md](docs/ci/workflow-lint.ja.md)     | `ci-actions` の検査 (actionlint、shellcheck) と手元での流し方                             | 検査の対象・ツール・バージョンを変えたとき            |
-| [docs/ci/loadtest.ja.md](docs/ci/loadtest.ja.md)               | `ci-loadtest` の検査 (`k6 inspect`、runner の中のアプリへの短い負荷試験) と手元での流し方 | 検査の内容・動くとき・just の版を変えたとき           |
-| [docs/loadtest/k6.ja.md](docs/loadtest/k6.ja.md)               | デプロイ中の k6 の負荷試験 (`loadtest/`) の閾値・失敗の種類・流し方                       | 閾値・失敗の種類・k6 の版・レシピを変えたとき         |
+| ドキュメント                                                   | 内容                                                                                          | 更新する条件                                          |
+| -------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| [docs/README.ja.md](docs/README.ja.md)                         | ドキュメントの索引                                                                            | 文書を追加・移動したとき                              |
+| [docs/infra/runtime.ja.md](docs/infra/runtime.ja.md)           | `enable_runtime` で時間課金のリソースを止める運用                                             | `enable_runtime` で作る・消すリソースを増減させたとき |
+| [docs/infra/tfstate.ja.md](docs/infra/tfstate.ja.md)           | tfstate のバケットのライフサイクル (`infra/tfstate/lifecycle.json`) と入れる手順              | `infra/tfstate/lifecycle.json` を変えたとき           |
+| [docs/infra/notification.ja.md](docs/infra/notification.ja.md) | デプロイの Slack への通知 (`modules/notification/`) とボットトークンを入れる手順              | 通知の内容・ルール・送り先を変えたとき                |
+| [docs/cd/task-definition.ja.md](docs/cd/task-definition.ja.md) | Terraform で変えたタスク定義を、`cd-backend` でサービスに届ける手順                           | `cd-backend` の複製元を変えたとき                     |
+| [docs/cd/notifier.ja.md](docs/cd/notifier.ja.md)               | 通知の Lambda のコードを置く `cd-notifier` (動くとき、ロール、手順、流し直し)                 | `cd-notifier` の動くとき・ロール・手順を変えたとき    |
+| [docs/ci/workflow-lint.ja.md](docs/ci/workflow-lint.ja.md)     | `ci-actions` の検査 (actionlint、shellcheck) と手元での流し方                                 | 検査の対象・ツール・バージョンを変えたとき            |
+| [docs/ci/pinning.ja.md](docs/ci/pinning.ja.md)                 | action とイメージの固定 (SHA、ダイジェスト) と Dependabot での更新 (`.github/dependabot.yml`) | 固定の対象・書き方・Dependabot の設定を変えたとき     |
+| [docs/ci/loadtest.ja.md](docs/ci/loadtest.ja.md)               | `ci-loadtest` の検査 (`k6 inspect`、runner の中のアプリへの短い負荷試験) と手元での流し方     | 検査の内容・動くとき・just の版を変えたとき           |
+| [docs/loadtest/k6.ja.md](docs/loadtest/k6.ja.md)               | デプロイ中の k6 の負荷試験 (`loadtest/`) の閾値・失敗の種類・流し方                           | 閾値・失敗の種類・k6 の版・レシピを変えたとき         |
 
 ## 費用を止める運用
 
