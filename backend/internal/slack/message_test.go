@@ -51,10 +51,10 @@ func TestReplyMessage(t *testing.T) {
 			wantBody: []string{
 				"*Triggered by*\ntamaco489",
 				"*Deployment ID*\n" + testDeployment,
-				"*Task definition*\n" + testTaskDef,
+				"*Task definition*\nprd-amber-api:7",
 				"*Run*\n" + testRunURL,
 			},
-			notInBody: []string{"Pushed"},
+			notInBody: []string{"Pushed", "arn:aws:ecs"},
 		},
 		"同じタグの流し直し": {
 			ev:         startedEvent(false),
@@ -63,23 +63,23 @@ func TestReplyMessage(t *testing.T) {
 		},
 		"進行中": {
 			ev:         ecsEvent(deploy.KindInProgress, "ECS deployment ecs-svc/1234567890 in progress."),
-			wantHeader: ":hourglass_flowing_sand: Deployment in progress",
+			wantHeader: ":hourglass_flowing_sand: Deployment in progress: prd-amber-api",
 			wantColor:  slack.ColorWarning,
 			wantBody:   []string{"*Service*\nprd-amber-api", "*Reason*\nECS deployment", "2026-11-23 11:12:30 (JST)"},
 		},
 		"ロールバック": {
 			ev:         ecsEvent(deploy.KindRollback, "ECS deployment circuit breaker: rolling back to deploymentId ecs-svc/111."),
-			wantHeader: ":rewind: Rollback started",
+			wantHeader: ":rewind: Rollback started: prd-amber-api",
 			wantColor:  slack.ColorDanger,
 		},
 		"完了": {
 			ev:         ecsEvent(deploy.KindCompleted, "ECS deployment ecs-svc/1234567890 completed."),
-			wantHeader: ":white_check_mark: Deployment completed",
+			wantHeader: ":white_check_mark: Deployment completed: prd-amber-api",
 			wantColor:  slack.ColorSuccess,
 		},
 		"失敗": {
 			ev:         ecsEvent(deploy.KindFailed, "ECS deployment circuit breaker: task failed to start."),
-			wantHeader: ":x: Deployment failed",
+			wantHeader: ":x: Deployment failed: prd-amber-api",
 			wantColor:  slack.ColorDanger,
 			wantBody:   []string{"task failed to start."},
 		},
@@ -114,18 +114,22 @@ func TestParentMessage(t *testing.T) {
 		"デプロイ中": {
 			parent:     parentWith(deploy.StatusDeploying),
 			wantHeader: ":rocket: Deploying v3: prd-amber-api",
-			wantColor:  slack.ColorInfo,
+			wantColor:  slack.ColorNeutral,
 			wantBody: []string{
 				"*Status*\nDeploying",
 				"*Triggered by*\ntamaco489",
 				"*Task definition*\nprd-amber-api:7",
-				"<" + testRunURL + "|GitHub Actions run>",
+				"<" + testECSURL + "|ECS deployment>   <" + testRunURL + "|GitHub Actions run>",
 			},
 		},
 		"バージョンがまだ分からない": {
 			parent:     &deploy.Parent{Service: testService, Status: deploy.StatusDeploying},
 			wantHeader: ":rocket: Deploying: prd-amber-api",
-			wantBody:   []string{"*Triggered by*\nnone", "GitHub Actions run: none"},
+			wantBody:   []string{"*Triggered by*\nnone", "ECS deployment: none   GitHub Actions run: none"},
+		},
+		"GitHub から始めていないデプロイでも、ECS のリンクを先頭に付ける": {
+			parent:   &deploy.Parent{Service: testService, Status: deploy.StatusDeploying, ECSDeploymentURL: testECSURL},
+			wantBody: []string{"<" + testECSURL + "|ECS deployment>   GitHub Actions run: none"},
 		},
 		"完了": {
 			parent:     completed,

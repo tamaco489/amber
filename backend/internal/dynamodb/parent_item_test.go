@@ -12,17 +12,18 @@ import (
 
 func TestParentItemRoundTrip(t *testing.T) {
 	want := &deploy.Parent{
-		DeploymentID:   testDeployment,
-		TS:             testParentTS,
-		Channel:        testChannel,
-		Service:        testService,
-		Status:         deploy.StatusCompleted,
-		Version:        "v3",
-		Actor:          "tamaco489",
-		RunURL:         testRunURL,
-		TaskDefinition: testTaskDef,
-		CompletedAt:    testTime,
-		Rev:            4,
+		DeploymentID:     testDeployment,
+		TS:               testParentTS,
+		Channel:          testChannel,
+		Service:          testService,
+		Status:           deploy.StatusCompleted,
+		Version:          "v3",
+		Actor:            "tamaco489",
+		RunURL:           testRunURL,
+		TaskDefinition:   testTaskDef,
+		ECSDeploymentURL: "https://ap-northeast-1.console.aws.amazon.com/ecs/v2/clusters/prd-amber/services/prd-amber-api/deployments/abc?region=ap-northeast-1",
+		CompletedAt:      testTime,
+		Rev:              4,
 	}
 
 	item := parentToItem(want, testTime)
@@ -30,7 +31,7 @@ func TestParentItemRoundTrip(t *testing.T) {
 		t.Errorf("pk = %q", got)
 	}
 	exp := item["expires_at"].(*types.AttributeValueMemberN).Value
-	if wantExp := testTime.Add(30 * 24 * time.Hour).Unix(); exp != strconv.FormatInt(wantExp, 10) {
+	if wantExp := testTime.Add(3 * 24 * time.Hour).Unix(); exp != strconv.FormatInt(wantExp, 10) {
 		t.Errorf("expires_at = %s, want %d", exp, wantExp)
 	}
 

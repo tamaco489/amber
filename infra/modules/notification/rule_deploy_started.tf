@@ -13,28 +13,11 @@ resource "aws_cloudwatch_event_rule" "deploy_started" {
   })
 }
 
-# 本文の組み立ては rule_ecs_deployment.tf と同じ (templates/deploy_started.json.tftpl)
+# ターゲット、再試行、呼ぶ許可の考え方は rule_ecs_deployment.tf と同じ
 resource "aws_cloudwatch_event_target" "deploy_started" {
   rule      = aws_cloudwatch_event_rule.deploy_started.name
   target_id = "slack"
-  arn       = aws_cloudwatch_event_api_destination.slack.arn
-  role_arn  = aws_iam_role.invoke_api_destination.arn
-
-  input_transformer {
-    input_paths = {
-      version        = "$.detail.version"
-      deploymentId   = "$.detail.deploymentId"
-      taskDefinition = "$.detail.taskDefinition"
-      pushed         = "$.detail.pushed"
-      actor          = "$.detail.actor"
-      runUrl         = "$.detail.runUrl"
-    }
-
-    input_template = templatefile("${path.module}/templates/deploy_started.json.tftpl", {
-      channel = var.slack_channel_id
-      color   = local.slack_colors.info
-    })
-  }
+  arn       = aws_lambda_function.notifier.arn
 
   retry_policy {
     maximum_event_age_in_seconds = local.max_event_age_seconds
@@ -44,4 +27,12 @@ resource "aws_cloudwatch_event_target" "deploy_started" {
   dead_letter_config {
     arn = aws_sqs_queue.dead_letter.arn
   }
+}
+
+resource "aws_lambda_permission" "deploy_started" {
+  statement_id  = "AllowEventBridge-${aws_cloudwatch_event_rule.deploy_started.name}"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.notifier.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.deploy_started.arn
 }

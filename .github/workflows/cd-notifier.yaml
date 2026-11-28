@@ -1,0 +1,74 @@
+name: cd-notifier
+
+# main への push で、通知の Lambda (backend/cmd/notifier) のコードを置き換える
+#   - notifier のビルドに関わるファイル (notifier の main、internal/、go.mod、go.sum) と、このワークフローを変えたときだけ動く
+# 流し直すときは workflow_dispatch で、起動時に ref として main を選ぶ
+#   - notifier 用のロールは main のブランチから発行されたトークンしか信頼しないため、ほかのブランチやタグを選ぶと AWS の認証で失敗する
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/cmd/notifier/**"
+      - "backend/internal/**"
+      - "backend/go.mod"
+      - "backend/go.sum"
+      - ".github/workflows/cd-notifier.yaml"
+      - ".github/workflows/scripts/cd-notifier/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# 置き換えを 1 つずつ順に行う (途中で打ち切らない)
+concurrency:
+  group: cd-notifier
+  cancel-in-progress: false
+
+# 名前は infra の modules/notification の命名規則 (<env>-amber-...) に合わせる
+env:
+  AWS_REGION: ap-northeast-1
+  FUNCTION_NAME: prd-amber-notification
+
+jobs:
+  # ============================================================
+  # deploy
+  # ============================================================
+  # 1. notifier を linux/arm64 でビルドし、bootstrap だけを入れた zip にする (just backend::build-notifier と同じ条件)
+  # 2. update-function-code で関数のコードを置き換え、置き換えが終わる (LastUpdateStatus が Successful になる) まで待つ
+  # 関数そのもの (ランタイム、メモリ、環境変数、ロールなど) は Terraform が管理し、ここではコードだけを置き換える
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # OIDC のトークンを発行して、notifier 用のロールを引き受けるため
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.mod
+
+      - name: Build
+        id: build
+        run: .github/workflows/scripts/cd-notifier/build.sh
+
+      # ロールの ARN はリポジトリの Variables (AWS_NOTIFIER_DEPLOY_ROLE_ARN) に置く
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_NOTIFIER_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update function code
+        id: deploy
+        env:
+          ZIP_PATH: ${{ steps.build.outputs.zip }}
+        run: .github/workflows/scripts/cd-notifier/update-function-code.sh
+
+      # 置いた関数、コミット、コードのハッシュを、実行結果のページ (ジョブのサマリー) に表にして残す
+      - name: Summary
+        env:
+          CODE_SHA256: ${{ steps.deploy.outputs.code_sha256 }}
+        run: .github/workflows/scripts/cd-notifier/write-deploy-summary.sh

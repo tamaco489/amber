@@ -17,6 +17,7 @@ module "github_oidc" {
 
   deploy_event_source      = module.notification.deploy_event_source
   deploy_event_detail_type = module.notification.deploy_event_detail_type
+  notifier_function_arn    = module.notification.notifier_function_arn
 }
 
 module "ecr_api" {
@@ -28,8 +29,8 @@ module "ecr_api" {
 
 # デプロイの通知 (Slack)
 #   - 置いておくだけでは料金がかからない (呼び出しごとの課金) ため、enable_runtime で消さずに常に置く
-#   - 消すと、接続とパラメータストアに入れたボットトークンも消え、作り直すたびに入れ直す必要がある
-#   - 通知の Lambda の土台 (状態のテーブル、ボットトークンのパラメータ、実行ロール、ロググループ) も、置いておくだけなら $0 のため、ここに含める
+#   - 消すと、パラメータストアに入れたボットトークンも消え、作り直すたびに入れ直す必要がある
+#   - 通知の Lambda と、その土台 (状態のテーブル、ボットトークンのパラメータ、実行ロール、ロググループ) も、置いておくだけなら $0 のため、ここに含める
 module "notification" {
   source = "../../modules/notification"
 

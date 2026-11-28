@@ -17,7 +17,7 @@ type look struct {
 
 // 状態ごとの、親の帯の色と見出し
 var parentLooks = map[deploy.Status]look{
-	deploy.StatusDeploying:   {color: ColorInfo, emoji: ":rocket:", verb: "Deploying", status: "Deploying"},
+	deploy.StatusDeploying:   {color: ColorNeutral, emoji: ":rocket:", verb: "Deploying", status: "Deploying"},
 	deploy.StatusRollingBack: {color: ColorDanger, emoji: ":rewind:", verb: "Rolling back", status: "Rolling back"},
 	deploy.StatusCompleted:   {color: ColorSuccess, emoji: ":white_check_mark:", verb: "Deployed", status: "Completed"},
 	deploy.StatusFailed:      {color: ColorDanger, emoji: ":x:", verb: "Failed to deploy", status: "Failed"},
@@ -30,10 +30,11 @@ type link struct {
 }
 
 // parentLinks は、親の投稿に載せるリンクを返す
-//   - URL が無いリンクは「<名前>: none」と出す (GitHub から始めていないデプロイなど)
-//   - ECS のデプロイのページへのリンクは #55 で、ここの先頭に足す
+//   - ECS のデプロイのページを先に、GitHub Actions の実行を 2 つ目に並べる (ECS のリンクは、GitHub から始めていないデプロイでも付くため)
+//   - URL が無いリンクは「<名前>: none」と出す (GitHub から始めていないデプロイ、ECS の URL を引けなかったときなど)
 func parentLinks(p *deploy.Parent) []link {
 	return []link{
+		{label: "ECS deployment", url: p.ECSDeploymentURL},
 		{label: "GitHub Actions run", url: p.RunURL},
 	}
 }
@@ -82,7 +83,6 @@ func ParentMessage(p *deploy.Parent) Message {
 	}
 
 	msg := message(p.Channel, "", title, l.color,
-		header(title),
 		Block{Type: "section", Fields: parentFields(l, p)},
 		Block{Type: "section", Text: &Text{Type: "mrkdwn", Text: strings.Join(links, "   ")}},
 	)

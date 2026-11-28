@@ -11,9 +11,10 @@ import (
 
 func TestParseEvent(t *testing.T) {
 	tests := map[string]struct {
-		raw        events.CloudWatchEvent
-		wantKind   deploy.Kind
-		wantPushed bool
+		raw            events.CloudWatchEvent
+		wantKind       deploy.Kind
+		wantPushed     bool
+		wantServiceARN string // ECS のイベントだけが持つ
 	}{
 		"開始": {
 			raw:        evStarted,
@@ -25,24 +26,29 @@ func TestParseEvent(t *testing.T) {
 			wantKind: deploy.KindStarted,
 		},
 		"進行中": {
-			raw:      evInProgress,
-			wantKind: deploy.KindInProgress,
+			raw:            evInProgress,
+			wantKind:       deploy.KindInProgress,
+			wantServiceARN: testServiceARN,
 		},
 		"サーキットブレーカーによるロールバック": {
-			raw:      evRollback,
-			wantKind: deploy.KindRollback,
+			raw:            evRollback,
+			wantKind:       deploy.KindRollback,
+			wantServiceARN: testServiceARN,
 		},
 		"アラームによるロールバック": {
-			raw:      ecsEvent("ev-alarm", deploy.ECSInProgress, "ECS deployment alarms: Rolling back to deploymentId ecs-svc/111."),
-			wantKind: deploy.KindRollback,
+			raw:            ecsEvent("ev-alarm", deploy.ECSInProgress, "ECS deployment alarms: Rolling back to deploymentId ecs-svc/111."),
+			wantKind:       deploy.KindRollback,
+			wantServiceARN: testServiceARN,
 		},
 		"完了": {
-			raw:      evCompleted,
-			wantKind: deploy.KindCompleted,
+			raw:            evCompleted,
+			wantKind:       deploy.KindCompleted,
+			wantServiceARN: testServiceARN,
 		},
 		"失敗": {
-			raw:      evFailed,
-			wantKind: deploy.KindFailed,
+			raw:            evFailed,
+			wantKind:       deploy.KindFailed,
+			wantServiceARN: testServiceARN,
 		},
 	}
 
@@ -61,6 +67,9 @@ func TestParseEvent(t *testing.T) {
 			}
 			if ev.Pushed != tt.wantPushed {
 				t.Errorf("pushed = %v, want %v", ev.Pushed, tt.wantPushed)
+			}
+			if ev.ServiceARN != tt.wantServiceARN {
+				t.Errorf("serviceARN = %q, want %q", ev.ServiceARN, tt.wantServiceARN)
 			}
 			if ev.DeploymentID != testDeployment {
 				t.Errorf("deploymentId = %q, want %q", ev.DeploymentID, testDeployment)

@@ -1,6 +1,7 @@
 package notifier
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -161,7 +162,7 @@ func TestHandle(t *testing.T) {
 			if tt.setup != nil {
 				tt.setup(fs, st)
 			}
-			n := newTestNotifier(fs, st)
+			n := newTestNotifier(fs, st, &fakeECS{})
 
 			for i, c := range tt.calls {
 				err := n.Handle(t.Context(), c.ev)
@@ -177,7 +178,7 @@ func TestHandle(t *testing.T) {
 func TestHandleBusyIsErrBusy(t *testing.T) {
 	st := newFakeStore()
 	st.steps["parent#"+testDeployment] = &fakeStep{leaseUntil: testTime.Add(time.Minute)}
-	n := newTestNotifier(&fakeSlack{}, st)
+	n := newTestNotifier(&fakeSlack{}, st, &fakeECS{})
 
 	if err := n.Handle(t.Context(), evInProgress); !errors.Is(err, ErrBusy) {
 		t.Errorf("err = %v, want ErrBusy", err)
@@ -197,13 +198,15 @@ func assertCounts(t *testing.T, fs *fakeSlack, parents, replies, updates, reacti
 }
 
 // newTestNotifier は、差し替えを使い、時刻を testTime に止めた Notifier を作る
-func newTestNotifier(fs *fakeSlack, st *fakeStore) *Notifier {
+func newTestNotifier(fs *fakeSlack, st *fakeStore, fe *fakeECS) *Notifier {
 	return &Notifier{
 		Slack:   fs,
 		Store:   st,
+		ECS:     fe,
 		Channel: testChannel,
 		Service: testService,
 		Now:     func() time.Time { return testTime },
+		Sleep:   func(context.Context, time.Duration) error { return nil },
 	}
 }
 

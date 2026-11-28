@@ -8,13 +8,8 @@ output "deploy_event_detail_type" {
   value       = local.deploy_event_detail_type
 }
 
-output "connection_name" {
-  description = "Name of the EventBridge connection. Set the Slack bot token to it with aws events update-connection."
-  value       = aws_cloudwatch_event_connection.slack.name
-}
-
 output "dead_letter_queue_url" {
-  description = "URL of the SQS queue that keeps the notifications EventBridge failed to deliver."
+  description = "URL of the SQS queue that keeps the notifications that failed: events EventBridge failed to deliver to the Lambda, and invocations that failed after the Lambda retries."
   value       = aws_sqs_queue.dead_letter.url
 }
 
@@ -24,8 +19,13 @@ output "dead_letter_queue_arn" {
 }
 
 output "notifier_function_name" {
-  description = "Name of the notification Lambda function. The function itself is not created yet."
-  value       = local.notifier_function_name
+  description = "Name of the notification Lambda function. The cd-notifier workflow deploys its code."
+  value       = aws_lambda_function.notifier.function_name
+}
+
+output "notifier_function_arn" {
+  description = "ARN of the notification Lambda function."
+  value       = aws_lambda_function.notifier.arn
 }
 
 output "notifier_role_arn" {

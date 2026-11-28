@@ -13,11 +13,13 @@ import (
 
 // Notifier は、イベントを受けて Slack に通知する
 type Notifier struct {
-	Slack   Slack            // Slack の Web API
-	Store   Store            // 親の投稿と手順の記録を残す場所
-	Channel string           // 投稿するチャンネルの ID
-	Service string           // Deployment Started (サービスの名前を持たない) で使う、サービスの名前
-	Now     func() time.Time // 今の時刻 (テストで差し替える。nil なら time.Now)
+	Slack   Slack                                            // Slack の Web API
+	Store   Store                                            // 親の投稿と手順の記録を残す場所
+	ECS     ECS                                              // ECS の API (デプロイのページの URL を引く)
+	Channel string                                           // 投稿するチャンネルの ID
+	Service string                                           // Deployment Started (サービスの名前を持たない) で使う、サービスの名前
+	Now     func() time.Time                                 // 今の時刻 (テストで差し替える。nil なら time.Now)
+	Sleep   func(ctx context.Context, d time.Duration) error // 待つ (テストで差し替える。nil なら d だけ待つ)
 }
 
 func (n *Notifier) now() time.Time {
@@ -25,6 +27,21 @@ func (n *Notifier) now() time.Time {
 		return time.Now()
 	}
 	return n.Now()
+}
+
+// sleep は、d だけ待つ。待つ間に ctx が終わったら、そのエラーを返す
+func (n *Notifier) sleep(ctx context.Context, d time.Duration) error {
+	if n.Sleep != nil {
+		return n.Sleep(ctx, d)
+	}
+	t := time.NewTimer(d)
+	defer t.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-t.C:
+		return nil
+	}
 }
 
 // Handle は、Lambda のハンドラー。1 回の呼び出しで 1 つのイベントを処理する
@@ -42,6 +59,9 @@ func (n *Notifier) Handle(ctx context.Context, raw events.CloudWatchEvent) error
 
 	log := slog.With("id", ev.ID, "kind", ev.Kind.String(), "deployment_id", ev.DeploymentID)
 	log.InfoContext(ctx, "handle event")
+
+	// 0. ECS のデプロイのページの URL (引けなくても通知は続ける)
+	n.lookupDeploymentURL(ctx, ev)
 
 	// 1. 親の投稿
 	parent, created, err := n.ensureParent(ctx, ev)

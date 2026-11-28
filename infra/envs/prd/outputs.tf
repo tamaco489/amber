@@ -23,6 +23,11 @@ output "deploy_role_arn" {
   value       = module.github_oidc.deploy_role_arn
 }
 
+output "notifier_deploy_role_arn" {
+  description = "ARN of the IAM role for the cd-notifier deploy. Register it as the AWS_NOTIFIER_DEPLOY_ROLE_ARN repository variable."
+  value       = module.github_oidc.notifier_deploy_role_arn
+}
+
 output "api_repository_url" {
   description = "URL of the ECR repository for the api image."
   value       = module.ecr_api.repository_url
@@ -43,13 +48,8 @@ output "ecs_service_name" {
   value       = var.enable_runtime ? module.ecs[0].service_name : null
 }
 
-output "notification_connection_name" {
-  description = "Name of the EventBridge connection for Slack. Set the bot token to it with aws events update-connection."
-  value       = module.notification.connection_name
-}
-
 output "notification_dead_letter_queue_url" {
-  description = "URL of the SQS queue that keeps the notifications EventBridge failed to deliver to Slack."
+  description = "URL of the SQS queue that keeps the failed notifications (events not delivered to the notification Lambda, and invocations that failed after its retries)."
   value       = module.notification.dead_letter_queue_url
 }
 
@@ -61,4 +61,9 @@ output "notification_slack_bot_token_parameter_name" {
 output "notification_log_group_name" {
   description = "Name of the CloudWatch log group for the notification Lambda."
   value       = module.notification.notifier_log_group_name
+}
+
+output "notification_function_name" {
+  description = "Name of the notification Lambda function. The cd-notifier workflow deploys its code."
+  value       = module.notification.notifier_function_name
 }

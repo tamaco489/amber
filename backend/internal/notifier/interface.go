@@ -38,3 +38,9 @@ type Store interface {
 	// PutParent は、親の投稿を書く。先に書き換えられていたら dynamodb.ErrConflict を返す
 	PutParent(ctx context.Context, p *deploy.Parent, now time.Time) error
 }
+
+// ECS は、Notifier が使う ECS の API (実装は internal/ecs。テストで差し替える)
+type ECS interface {
+	// DeploymentURL は、ECS のイベントのデプロイの、ECS のコンソールのデプロイのページの URL を返す
+	DeploymentURL(ctx context.Context, ev *deploy.Event) (string, error)
+}

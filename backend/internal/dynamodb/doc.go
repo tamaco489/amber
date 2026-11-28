@@ -2,21 +2,22 @@
 //
 // # アイテム
 //
-// テーブルのパーティションキーは、文字列の pk だけ (ソートキーはない)。expires_at は TTL の属性 (Unix 秒) で、30 日後に消える。
+// テーブルのパーティションキーは、文字列の pk だけ (ソートキーはない)。expires_at は TTL の属性 (Unix 秒) で、3 日後に消える (デプロイは長くても数時間で終わるため、それより長く残さない)。
 //
 // 親の投稿 (pk = "deployment#<デプロイ ID>")
 //
-//	ts               S  親の投稿の ts
-//	channel          S  投稿したチャンネルの ID
-//	service          S  サービスの名前
-//	status           S  deploying / rolling_back / completed / failed
-//	version          S  バージョン (Git のタグ。開始が届くまでは無い)
-//	actor            S  起動した人 (同上)
-//	run_url          S  GitHub Actions の実行の URL (同上)
-//	task_definition  S  タスク定義の ARN (同上)
-//	completed_at     S  完了した時刻 (RFC 3339)
-//	rev              N  書き換えるたびに 1 ずつ増やす (楽観ロック。同時に届いたイベントが、互いの書き換えを消さないようにする)
-//	expires_at       N  TTL
+//	ts                  S  親の投稿の ts
+//	channel             S  投稿したチャンネルの ID
+//	service             S  サービスの名前
+//	status              S  deploying / rolling_back / completed / failed
+//	version             S  バージョン (Git のタグ。開始が届くまでは無い)
+//	actor               S  起動した人 (同上)
+//	run_url             S  GitHub Actions の実行の URL (同上)
+//	task_definition     S  タスク定義の ARN (同上)
+//	ecs_deployment_url  S  ECS のデプロイのページの URL (ECS のイベントで引けるまでは無い)
+//	completed_at        S  完了した時刻 (RFC 3339)
+//	rev                 N  書き換えるたびに 1 ずつ増やす (楽観ロック。同時に届いたイベントが、互いの書き換えを消さないようにする)
+//	expires_at          N  TTL
 //
 // 手順の記録 (pk = "step#<手順のキー>")
 //
