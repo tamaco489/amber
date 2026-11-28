@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 
 	"github.com/tamaco489/amber/backend/internal/deploy"
+	"github.com/tamaco489/amber/backend/internal/slack"
 )
 
 // Notifier は、イベントを受けて Slack に通知する
@@ -18,6 +19,7 @@ type Notifier struct {
 	ECS     ECS                                              // ECS の API (デプロイのページの URL を引く)
 	Channel string                                           // 投稿するチャンネルの ID
 	Service string                                           // Deployment Started (サービスの名前を持たない) で使う、サービスの名前
+	UserIDs slack.UserIDs                                    // 起動した人にメンションするための、GitHub のユーザー名から Slack のユーザー ID を引く対応表 (nil ならメンションしない)
 	Now     func() time.Time                                 // 今の時刻 (テストで差し替える。nil なら time.Now)
 	Sleep   func(ctx context.Context, d time.Duration) error // 待つ (テストで差し替える。nil なら d だけ待つ)
 }
