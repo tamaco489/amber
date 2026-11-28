@@ -61,23 +61,10 @@ jobs:
         with:
           just-version: ${{ env.JUST_VERSION }}
 
-      # backend::build と同じイメージ (amber-api:old、linux/arm64、VERSION=old) を、GitHub Actions のキャッシュを使ってビルドする
-      #   - backend::run がそのタグで起動するため、load で runner の Docker に読み込む
-      #   - タグ・platform・VERSION は backend/justfile の build と合わせる
-      #   - scope を分け、ci-backend のキャッシュと上書きし合わないようにする
-      # DOC: https://docs.docker.com/build/cache/backends/gha/
-      - uses: docker/setup-buildx-action@v4
-
+      # ビルドのキャッシュ (type=gha) は使わない。mode=max ではベースイメージの層まで書き出し、
+      # backend/cmd/api/ を変えた PR では毎回 Go のビルドからやり直すため、書き出しの分だけ遅くなる
       - name: Build app image
-        uses: docker/build-push-action@v7
-        with:
-          context: backend
-          platforms: linux/arm64
-          load: true
-          tags: amber-api:old
-          build-args: VERSION=old
-          cache-from: type=gha,scope=ci-loadtest
-          cache-to: type=gha,mode=max,scope=ci-loadtest
+        run: just backend::build old
 
       # backend::run は前面で動くため、裏で動かし、/health が 200 を返すまで待つ
       - name: Start app
