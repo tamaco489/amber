@@ -76,7 +76,7 @@ func (n *Notifier) postParent(ctx context.Context, ev *deploy.Event, key string)
 	}
 	p.Apply(ev)
 
-	ts, err := n.Slack.PostMessage(ctx, slack.WithMention(slack.ParentMessage(p), n.parentMention(p)))
+	ts, err := n.Slack.PostMessage(ctx, n.parentMessage(p))
 	if err != nil {
 		n.release(ctx, key)
 		return nil, fmt.Errorf("%s: %w", key, err)
@@ -93,6 +93,12 @@ func (n *Notifier) postParent(ctx context.Context, ev *deploy.Event, key string)
 	return p, nil
 }
 
+// parentMessage は、親の投稿の本文を組み立てる (chat.postMessage と chat.update の両方で使う)
+//   - chat.update は本文をまるごと置き換えるため、書き換えるときも、先頭に起動した人へのメンションを付け直す (付けないと、メンションが消える)
+func (n *Notifier) parentMessage(p *deploy.Parent) slack.Message {
+	return slack.WithMention(slack.ParentMessage(p), n.parentMention(p))
+}
+
 // updateParent は、イベントを親の状態に反映して保存し、親の投稿を書き換える
 //   - 保存したあと chat.update の前に止まっても、再試行で同じ状態のまま chat.update をやり直す
 //   - ほかの呼び出しと書き込みがぶつかったら、読み直して書き直す
@@ -105,7 +111,7 @@ func (n *Notifier) updateParent(ctx context.Context, ev *deploy.Event) error {
 		if err != nil {
 			return err
 		}
-		return n.Slack.UpdateMessage(ctx, slack.ParentMessage(next))
+		return n.Slack.UpdateMessage(ctx, n.parentMessage(next))
 	}
 	return fmt.Errorf("update parent of %s: %w", ev.DeploymentID, dynamodb.ErrConflict)
 }
