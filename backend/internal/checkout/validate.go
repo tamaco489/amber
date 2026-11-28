@@ -28,7 +28,6 @@ var requiredRequestFields = []requiredField[request]{
 var requiredItemFields = []requiredField[item]{
 	{name: "sku", present: func(it *item) bool { return it.SKU != nil }},
 	{name: "quantity", present: func(it *item) bool { return it.Quantity != nil }},
-	{name: "unit_price", present: func(it *item) bool { return it.UnitPrice != nil }},
 }
 
 // validate は、必須の項目がそろっているかと、値が使えるかを確かめる
