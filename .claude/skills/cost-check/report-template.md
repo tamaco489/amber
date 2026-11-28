@@ -43,7 +43,7 @@
 | 無料             | 通知 (EventBridge、SQS の DLQ)            | DLQ が 0 件。接続と API 送信先がない                      |      |      |          |      |
 | 無料             | Secrets Manager (`events!connection/...`) | ない (接続と一緒に消えている)                             |      |      |          |      |
 | 無料             | DynamoDB の通知の状態のテーブル           | 1 つだけで、`PAY_PER_REQUEST`                             |      |      |          |      |
-| 無料             | SSM のボットトークンのパラメータ          | 1 つだけで、`Standard`                                    |      |      |          |      |
+| 無料             | SSM の通知のパラメータ                    | ボットトークンと対応表の 2 つだけで、`Standard`           |      |      |          |      |
 | 無料             | 通知の Lambda の関数                      | 1 つだけで、`provided.al2023`、`arm64` (まだないのもよい) |      |      |          |      |
 
 ## 期待と違ったもの

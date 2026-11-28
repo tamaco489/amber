@@ -44,26 +44,42 @@ EventBridge のルールがイベントを拾い、通知の Lambda (`backend/cm
 - 親の `ts` と、手順 (親の作成、返信、書き換え、スタンプ) ごとの済んだ印を、DynamoDB のテーブルに残します。再試行で同じイベントが届いても、同じ返信は 2 回付きません
 - 本文は Lambda が組み立てるため、`reason` などの値に `"` が入っても壊れません
 
+## デプロイを始めた人へのメンション
+
+デプロイを始めた人 (`Triggered by` の GitHub のユーザー) に、Slack でメンションします。メンションは、1 回のデプロイで 1 回だけです。
+
+| 届いた順                   | メンションする投稿                                |
+| -------------------------- | ------------------------------------------------- |
+| 開始が進行中より先に届いた | 親の投稿 (`chat.postMessage`) の先頭              |
+| 進行中が開始より先に届いた | 開始の返信 (`Deploy started` / `Redeploy`) の先頭 |
+
+- Slack のメンションは、Slack のユーザー ID (`<@U...>`) で書く必要があります。GitHub のユーザー名では届きません。そのため、GitHub のユーザー名から Slack のユーザー ID を引く対応表を、SSM のパラメータ `/prd-amber/notification/slack-user-ids` に置きます (手順は下の「対応表に人を足す」)
+- 進行中が先に届いたときは、親を作る時点で起動した人が分かりません。あとから `chat.update` で親に起動した人を埋めても、メンションの通知は届きません。そのため、そのときだけ開始の返信でメンションします
+- 親の書き換え (`chat.update`) と、ほかの返信ではメンションしません。親を書き換えると、親の本文の先頭のメンションは消えます (通知は親を投稿した時点で届いています)
+- 対応表に無い人と、起動した人が分からないデプロイ (`Triggered by` が `none`) では、メンションせず、今までどおり通知します
+- 対応表を読めないとき (パラメータが無い、JSON でない、Slack のユーザー ID の形でない値がある) も、メンションせずに通知します。関数のログに `notify without mentions` が出ます
+
 ## 構成
 
-| リソース                                                         | 役割                                                                                                                                     |
-| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| ルール `prd-amber-ecs-deployment-{in-progress,completed,failed}` | ECS のデプロイの状態の変化を、`eventName` ごとに拾う (default のイベントバス)                                                            |
-| ルール `prd-amber-deploy-started`                                | `cd-backend` が送るイベント (`amber.cd-backend` / `Deployment Started`) を拾う                                                           |
-| ルールのターゲット                                               | 関数 `prd-amber-notification`。入力変換はせず、イベントをそのまま渡す。届けられなければ 1 時間・10 回まで再試行し、 DLQ へ               |
-| 関数のリソースベースのポリシー                                   | EventBridge (`events.amazonaws.com`) が、上の 4 本のルールからだけ関数を呼べる (`source_arn` で絞る)                                     |
-| Lambda の関数 `prd-amber-notification`                           | `provided.al2023`、`arm64`、128 MB、タイムアウト 30 秒。コードは `cd-notifier` が置く ([通知の Lambda のデプロイ](../cd/notifier.ja.md)) |
-| 関数の非同期の呼び出しの設定                                     | 関数がエラーを返したら 2 回まで再試行し、1 時間より古いものは捨てる。失敗したものは DLQ に送る                                           |
-| DynamoDB のテーブル `prd-amber-notification`                     | デプロイごとの親の投稿と、手順ごとの済んだ印 (キーは `pk`)。オンデマンドで、3 日後に TTL (`expires_at`) で消える                         |
-| SSM のパラメータ `/prd-amber/notification/slack-bot-token`       | Slack のボットトークン (標準の `SecureString`)。ダミー値で作り、本物の値は CLI で入れる                                                  |
-| IAM ロール `prd-amber-notification-lambda`                       | 実行ロール。テーブル、パラメータ、ロググループ、 DLQ への送信                                                                            |
-| CloudWatch のロググループ `/aws/lambda/prd-amber-notification`   | 関数のログを 3 日残す                                                                                                                    |
-| SQS キュー `prd-amber-notification-dlq`                          | 通知に失敗したイベントを 3 日残す (DLQ)。中身は下の「 DLQ 」の節                                                                         |
-| deploy 用のロールの `events:PutEvents`                           | `cd-backend` から送れるのは、上の `source` と `detail-type` の組み合わせのイベントだけ                                                   |
+| リソース                                                         | 役割                                                                                                                                      |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| ルール `prd-amber-ecs-deployment-{in-progress,completed,failed}` | ECS のデプロイの状態の変化を、`eventName` ごとに拾う (default のイベントバス)                                                             |
+| ルール `prd-amber-deploy-started`                                | `cd-backend` が送るイベント (`amber.cd-backend` / `Deployment Started`) を拾う                                                            |
+| ルールのターゲット                                               | 関数 `prd-amber-notification`。入力変換はせず、イベントをそのまま渡す。届けられなければ 1 時間・10 回まで再試行し、 DLQ へ                |
+| 関数のリソースベースのポリシー                                   | EventBridge (`events.amazonaws.com`) が、上の 4 本のルールからだけ関数を呼べる (`source_arn` で絞る)                                      |
+| Lambda の関数 `prd-amber-notification`                           | `provided.al2023`、`arm64`、128 MB、タイムアウト 30 秒。コードは `cd-notifier` が置く ([通知の Lambda のデプロイ](../cd/notifier.ja.md))  |
+| 関数の非同期の呼び出しの設定                                     | 関数がエラーを返したら 2 回まで再試行し、1 時間より古いものは捨てる。失敗したものは DLQ に送る                                            |
+| DynamoDB のテーブル `prd-amber-notification`                     | デプロイごとの親の投稿と、手順ごとの済んだ印 (キーは `pk`)。オンデマンドで、3 日後に TTL (`expires_at`) で消える                          |
+| SSM のパラメータ `/prd-amber/notification/slack-bot-token`       | Slack のボットトークン (標準の `SecureString`)。ダミー値で作り、本物の値は CLI で入れる                                                   |
+| SSM のパラメータ `/prd-amber/notification/slack-user-ids`        | GitHub のユーザー名から Slack のユーザー ID を引く対応表 (JSON、標準の `SecureString`)。空の対応表 (`{}`) で作り、本物の値は CLI で入れる |
+| IAM ロール `prd-amber-notification-lambda`                       | 実行ロール。テーブル、パラメータ (2 つ)、ロググループ、 DLQ への送信                                                                      |
+| CloudWatch のロググループ `/aws/lambda/prd-amber-notification`   | 関数のログを 3 日残す                                                                                                                     |
+| SQS キュー `prd-amber-notification-dlq`                          | 通知に失敗したイベントを 3 日残す (DLQ)。中身は下の「 DLQ 」の節                                                                          |
+| deploy 用のロールの `events:PutEvents`                           | `cd-backend` から送れるのは、上の `source` と `detail-type` の組み合わせのイベントだけ                                                    |
 
 - ECS のルールを `eventName` ごとに分けているのは、`eventName` が決まった値で、絞り込みに使えるためです
 - Lambda のターゲットはロールを使いません。呼ぶ許可は、関数のリソースベースのポリシーで与えます
-- Terraform は、パラメータを書き込み専用の `value_wo` で書くため、CLI で入れた本物のトークンは state に入りません
+- Terraform は、パラメータを書き込み専用の `value_wo` で書くため、CLI で入れた本物のトークンと対応表は state に入りません
 - Terraform は、関数を動かない仮のコードで作り、コードの変更は無視します。コードは `cd-notifier` が置きます
 - 関数のタイムアウト (30 秒) は、手順の印の期限 (`backend/internal/dynamodb` の 60 秒) より短くしています。長く動くと、再試行の呼び出しが同じ手順を並べて進めるためです
 - どれも、置いておくだけでは料金がかかりません (呼び出し、リクエスト、実行時間ごとの課金)。そのため `enable_runtime` で消さず、常に置きます
@@ -103,6 +119,57 @@ unset SLACK_BOT_TOKEN
 - 出力の `Version` が 1 つ増えていれば入っています
 - 関数は、トークンをコールドスタートのときに 1 回だけ読みます。入れ替えた直後は、動いている実行環境が古いトークンを使い続けます。すぐに切り替えたいときは、`cd-notifier` を流し直します (コードを置き直すと、実行環境が作り直されます)
 - アプリを入れ直してもトークンの値が変わらなければ、入れ直す必要はありません。値が変わったら、上の手順で入れ直します
+
+## 対応表に人を足す
+
+Terraform は、パラメータ `/prd-amber/notification/slack-user-ids` を空の対応表 (`{}`) で作ります。公開リポジトリのため、Slack のユーザー ID をコードと tfvars に書かないためです。
+人を足すときは、ユーザーが AWS CLI で対応表を書き換えます (AWS を変更する操作)。Terraform は、入れた対応表を空に戻しません (`value_wo_version` を上げない限り書き込まない)。
+
+値は、GitHub のユーザー名をキー、Slack のユーザー ID を値にした JSON です。GitHub のユーザー名の大文字と小文字は区別しません。
+
+```json
+{ "octocat": "U0123456789" }
+```
+
+Slack のユーザー ID は、Slack でその人のプロフィールを開き、`⋮` (その他) の「メンバー ID をコピー」で控えます (`U` か `W` で始まります)。
+
+今の対応表を、Git の対象外の `tmp/` に書き出します。
+
+```sh
+mkdir -p tmp/slack-app-settings
+
+aws ssm get-parameter \
+  --name /prd-amber/notification/slack-user-ids \
+  --with-decryption \
+  --query Parameter.Value --output text \
+  --profile tamaco489 --region ap-northeast-1 \
+  > tmp/slack-app-settings/slack-user-ids.json
+```
+
+人を足して、書き戻します。`GITHUB_LOGIN` と `SLACK_USER_ID` は、足す人の値にします。
+
+```sh
+GITHUB_LOGIN=octocat
+SLACK_USER_ID=U0123456789
+
+jq -c --arg login "${GITHUB_LOGIN}" --arg id "${SLACK_USER_ID}" '. + {($login): $id}' \
+  tmp/slack-app-settings/slack-user-ids.json \
+  > tmp/slack-app-settings/slack-user-ids.next.json
+
+aws ssm put-parameter \
+  --name /prd-amber/notification/slack-user-ids \
+  --type SecureString \
+  --value "$(cat tmp/slack-app-settings/slack-user-ids.next.json)" \
+  --overwrite \
+  --profile tamaco489 --region ap-northeast-1 \
+  | jq .
+
+rm -f tmp/slack-app-settings/slack-user-ids.json tmp/slack-app-settings/slack-user-ids.next.json
+```
+
+- 出力の `Version` が 1 つ増えていれば入っています
+- 人を外すときは、`jq` の式を `'del(.[$login])'` にします (`--arg id` は要りません)
+- 関数は、対応表をコールドスタートのときに 1 回だけ読みます。すぐに反映したいときは、ボットトークンと同じく `cd-notifier` を流し直します
 
 ## DLQ
 
@@ -163,3 +230,4 @@ aws sqs receive-message \
 - [chat.postMessage (Slack 公式)](https://docs.slack.dev/reference/methods/chat.postMessage)
 - [chat.update (Slack 公式)](https://docs.slack.dev/reference/methods/chat.update)
 - [reactions.add (Slack 公式)](https://docs.slack.dev/reference/methods/reactions.add)
+- [Formatting text for app surfaces: mentioning users (Slack 公式)](https://docs.slack.dev/messaging/formatting-message-text#mentioning-users)

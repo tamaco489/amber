@@ -103,7 +103,7 @@ description: amber の AWS のリソースのうち、置いておくだけで�
 |                                | 通知 (EventBridge のルール、SQS)                                                | DLQ が 0 件。EventBridge の接続と API 送信先がない (Lambda に切り替えたときに消した)                                                                                         |
 |                                | Secrets Manager の `prd-amber` を含むシークレット                               | ない (接続と一緒に `events!connection/prd-amber-slack/...` が消えている。残っていたら NG)                                                                                    |
 |                                | DynamoDB の通知の状態のテーブル `prd-amber-notification`                        | このテーブル 1 つだけで、`PAY_PER_REQUEST` (オンデマンド)                                                                                                                    |
-|                                | SSM のパラメータ `/prd-amber/notification/slack-bot-token`                      | このパラメータ 1 つだけで、`Standard` (標準)                                                                                                                                 |
+|                                | SSM のパラメータ `/prd-amber/notification/slack-{bot-token,user-ids}`           | この 2 つだけで、どちらも `Standard` (標準)                                                                                                                                  |
 |                                | 通知の Lambda の関数 `prd-amber-notification`                                   | この関数 1 つだけで、`provided.al2023`、`arm64` (リクエストと実行時間の課金のため、置いておくだけなら \$0。apply の前で、まだないのもよい)                                   |
 
 - AWS Config は、アカウント全体で設定の変化を記録している。`enable_runtime` を切り替えるたびに、記録 1 件ごとの小さな料金がかかる (置いておくだけではかからない)
