@@ -17,6 +17,7 @@ GitHub Actions のワークフローと、そこから呼ぶシェルスクリ�
 - 指摘が 1 件でもあると失敗します。shellcheck の `info` も含みます
 - `.github/workflows/` 配下を変えた PR と、`main` への push で動きます
 - バージョンは `ci-actions.yaml` の `env` で固定しています (actionlint 1.7.12、shellcheck 0.11.0)。ダウンロードしたファイルはチェックサムで確かめます。上げるときは、チェックサムも書き換えます
+- actionlint は、よく使われる action の入力を、`@v4` のようなメジャーのタグで指定したときだけ検査します。このリポジトリの action は commit の SHA で固定しているため、`with:` の入力は検査されません ([action とイメージの固定](./pinning.ja.md))
 
 ## 手元での流し方
 

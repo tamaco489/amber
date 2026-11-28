@@ -36,7 +36,7 @@ The findings are kept as material for choosing settings.
 ## Tools
 
 Tools used on local machines. Go, golangci-lint, Terraform, tflint and trivy are pinned in `.tool-versions` (asdf), which both local machines and CI read.
-actionlint and shellcheck are pinned in `ci-actions.yaml`, k6 by the container image in `loadtest/justfile`, and just in CI by `ci-loadtest.yaml`. The others are not pinned; the versions shown are the ones confirmed to work.
+actionlint and shellcheck are pinned in `ci-actions.yaml`, k6 by the container image in `loadtest/Dockerfile` (read by `loadtest/justfile`), and just in CI by `ci-loadtest.yaml`. The others are not pinned; the versions shown are the ones confirmed to work.
 
 | Tool          | Version | Used for                                                                                                                 |
 | ------------- | ------- | ------------------------------------------------------------------------------------------------------------------------ |
@@ -47,7 +47,7 @@ actionlint and shellcheck are pinned in `ci-actions.yaml`, k6 by the container i
 | tflint        | 0.66.0  | Linting Terraform (including the AWS ruleset)                                                                            |
 | trivy         | 0.76.2  | Scanning Terraform for misconfigurations                                                                                 |
 | AWS CLI       | 2.40.0  | Checking state, updating the prefix list, logging in to ECR                                                              |
-| k6            | 2.4.0   | Load testing during deployments (`loadtest/justfile`)                                                                    |
+| k6            | 2.4.0   | Load testing during deployments (`loadtest/Dockerfile`)                                                                  |
 | just          | 1.46.0  | Task recipes (`just backend::push`, `just infra::plan`, ...)                                                             |
 | actionlint    | 1.7.12  | Linting GitHub Actions workflows (pinned in `ci-actions.yaml`)                                                           |
 | shellcheck    | 0.11.0  | Linting shell scripts (pinned in `ci-actions.yaml`)                                                                      |
@@ -63,6 +63,7 @@ actionlint and shellcheck are pinned in `ci-actions.yaml`, k6 by the container i
 | [Applying task definition changes](./cd/task-definition.md)   | Getting task definition changes made in Terraform onto the service with `cd-backend`                                                                                         |
 | [Deploying the notification Lambda](./cd/notifier.md)         | How `cd-notifier` puts the code of the notification Lambda on a push to `main`, and how to redeploy it                                                                       |
 | [Checking workflows and scripts](./ci/workflow-lint.md)       | What `ci-actions` checks with actionlint and shellcheck, and how to run it locally                                                                                           |
+| [Pinning actions and images](./ci/pinning.md)                 | Why workflow actions and container images are pinned by commit SHA and digest, how to write them, taking updates through Dependabot PRs, and what pinning does not cover     |
 | [Checking the k6 scripts](./ci/loadtest.md)                   | What `ci-loadtest` checks with `k6 inspect` and a short load test against the application inside the runner, and how to run it locally                                       |
 | [Load testing during deployments (k6)](./loadtest/k6.md)      | Running k6 during a deployment and counting failures per kind and responses per version                                                                                      |
 | [Ruleset for v\* tags](./github/tag-ruleset.md)               | Limiting who can create, update and delete `v*` tags (the deployment trigger) to admins                                                                                      |

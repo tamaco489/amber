@@ -17,6 +17,7 @@ Back to the [documentation index](../README.md).
 - A single finding fails the check, including shellcheck `info`
 - It runs on PRs that change files under `.github/workflows/`, and on pushes to `main`
 - Versions are pinned in the `env` of `ci-actions.yaml` (actionlint 1.7.12, shellcheck 0.11.0). Downloads are verified with checksums. When bumping a version, update the checksum too
+- actionlint checks the inputs of popular actions only when they are referenced by a major-version tag (such as `@v4`). Actions in this repository are pinned to a commit SHA, so their `with:` inputs are not checked ([Pinning actions and images](./pinning.md))
 
 ## Running locally
 
