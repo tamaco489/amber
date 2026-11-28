@@ -41,7 +41,7 @@ func run() error {
 
 	srv := &http.Server{
 		Addr:              addr,
-		Handler:           newMux(version),
+		Handler:           withAccessLog(newMux(version), version),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
