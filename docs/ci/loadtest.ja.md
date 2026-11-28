@@ -8,13 +8,16 @@
 
 ## 検査の内容
 
-| ジョブ             | runner             | 流すもの                                                                    | 失敗する例                                                    |
-| ------------------ | ------------------ | --------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| `loadtest-inspect` | `ubuntu-latest`    | `just loadtest::inspect 5 5s`                                               | import のパスの誤り、構文の誤り、`options` を組み立てられない |
-| `loadtest-run`     | `ubuntu-24.04-arm` | `just backend::build old` と `backend::run old` のあと `loadtest::run 5 5s` | 失敗が 1 件でも出る (99)、`setup()` で古い版を読めない (108)  |
+| ジョブ             | runner             | 流すもの                                                                                             | 失敗する例                                                    |
+| ------------------ | ------------------ | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `loadtest-inspect` | `ubuntu-latest`    | `just loadtest::inspect 5 5s`                                                                        | import のパスの誤り、構文の誤り、`options` を組み立てられない |
+| `loadtest-run`     | `ubuntu-24.04-arm` | イメージのビルド (`backend::build old` と同じもの) と `backend::run old` のあと `loadtest::run 5 5s` | 失敗が 1 件でも出る (99)、`setup()` で古い版を読めない (108)  |
 
 - `loadtest-run` は、アプリのイメージを runner の中でビルドして動かし、`/health` が 200 を返してから、k6 を 5 RPS で 5 秒流します。送り先は runner の中のコンテナだけで、AWS には触りません (OIDC のロールも使いません)
 - イメージは ECS と同じ `linux/arm64` でビルドします。エミュレーション (QEMU) を使わずに動かすため、arm64 の runner を使います
+- イメージのビルドは、`backend::build` と同じタグ・platform・`VERSION` で、`docker/build-push-action` に GitHub Actions のキャッシュ (`scope=ci-loadtest`) を付けて行います。`backend/justfile` の `build` を変えたときは、ワークフローも合わせます
+  - `backend/cmd/api/` を変えていない PR では、Go のビルドの層がキャッシュから戻り、golang のイメージの pull とビルドを省けます
+  - `backend/cmd/api/` を変えた PR では、Go のビルドからやり直します
 - 失敗したときは、アプリのログを最後のステップで出します
 
 ## 動くとき

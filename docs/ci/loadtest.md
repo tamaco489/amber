@@ -8,13 +8,16 @@ Back to the [documentation index](../README.md).
 
 ## What is checked
 
-| Job                | Runner             | What it runs                                                                | Fails when                                                             |
-| ------------------ | ------------------ | --------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `loadtest-inspect` | `ubuntu-latest`    | `just loadtest::inspect 5 5s`                                               | An import path or the syntax is wrong, or `options` cannot be built    |
-| `loadtest-run`     | `ubuntu-24.04-arm` | `just backend::build old` and `backend::run old`, then `loadtest::run 5 5s` | Any request fails (99), or `setup()` cannot read the old version (108) |
+| Job                | Runner             | What it runs                                                                                     | Fails when                                                             |
+| ------------------ | ------------------ | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
+| `loadtest-inspect` | `ubuntu-latest`    | `just loadtest::inspect 5 5s`                                                                    | An import path or the syntax is wrong, or `options` cannot be built    |
+| `loadtest-run`     | `ubuntu-24.04-arm` | Build the image (same as `backend::build old`) and `backend::run old`, then `loadtest::run 5 5s` | Any request fails (99), or `setup()` cannot read the old version (108) |
 
 - `loadtest-run` builds and starts the application image inside the runner, waits for `/health` to return 200, and runs k6 at 5 RPS for 5 seconds. Requests go only to the container inside the runner. AWS is not touched (no OIDC role is used)
 - The image is built for `linux/arm64`, the same as ECS. An arm64 runner is used so that it runs without emulation (QEMU)
+- The image is built with `docker/build-push-action` and the GitHub Actions cache (`scope=ci-loadtest`), using the same tag, platform and `VERSION` as `backend::build`. When `build` in `backend/justfile` changes, update the workflow to match
+  - On PRs that do not change `backend/cmd/api/`, the Go build layer is restored from the cache, so pulling the golang image and building are skipped
+  - On PRs that change `backend/cmd/api/`, the build starts again from the Go build
 - On failure, the last step prints the application logs
 
 ## When it runs
