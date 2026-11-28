@@ -24,7 +24,7 @@ Terraform (`infra/modules/notification/lambda.tf`) creates the function itself, 
 
 - On a push to `main` that changes any of these
   - `backend/cmd/notifier/**`, `backend/internal/**`, `backend/go.mod`, `backend/go.sum`
-  - Changes only under `backend/internal/server/**`, `backend/internal/health/**`, or `backend/internal/checkout/**` do not trigger it. Only the test application imports them, so the notifier code does not change
+  - Changes only under `backend/internal/server/**`, `backend/internal/health/**`, `backend/internal/checkout/**`, or `backend/internal/failmode/**` do not trigger it. Only the test application imports them, so the notifier code does not change
   - `.github/workflows/cd-notifier.yaml`, `.github/workflows/scripts/cd-notifier/**`
 - When run by hand with `workflow_dispatch`. Choose `main` as the ref. The role trusts only tokens for `main`, so choosing another branch or a tag fails at AWS authentication
 - Runs go one at a time (`concurrency: cd-notifier`). A running one is not cancelled

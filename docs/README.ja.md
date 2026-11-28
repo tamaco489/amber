@@ -67,3 +67,4 @@ actionlint と shellcheck は `ci-actions.yaml` で、k6 は `loadtest/Dockerfil
 | [k6 のスクリプトの検査](./ci/loadtest.ja.md)                | `ci-loadtest` が `k6 inspect` と、runner の中のアプリへの短い負荷試験で検査する内容と、手元での流し方                                        |
 | [デプロイ中の負荷試験 (k6)](./loadtest/k6.ja.md)            | デプロイ中に k6 で負荷をかけ、失敗の種類とバージョンごとの件数を数える手順                                                                   |
 | [v\* のタグのルールセット](./github/tag-ruleset.ja.md)      | デプロイの起点の `v*` のタグを、作成・更新・削除できる人を管理者に絞る                                                                       |
+| [わざと失敗する版](./backend/fail-mode.ja.md)               | 版の名前が `-fail-exit` / `-fail-health` で終わる版をわざと失敗させ、デプロイのサーキットブレーカーによるロールバックを確かめる              |

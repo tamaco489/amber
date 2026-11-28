@@ -25,6 +25,7 @@ COPY cmd ./cmd
 COPY internal/server ./internal/server
 COPY internal/health ./internal/health
 COPY internal/checkout ./internal/checkout
+COPY internal/failmode ./internal/failmode
 
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
     go build -trimpath -ldflags "-s -w -X main.version=${VERSION}" -o /out/api ./cmd/api

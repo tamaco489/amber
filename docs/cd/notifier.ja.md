@@ -24,7 +24,7 @@
 
 - `main` への push で、次のどれかが変わったとき
   - `backend/cmd/notifier/**`、`backend/internal/**`、`backend/go.mod`、`backend/go.sum`
-  - `backend/internal/server/**`、`backend/internal/health/**`、`backend/internal/checkout/**` だけの変更では動きません。検証用のアプリだけが読み込むパッケージで、notifier のコードは変わらないためです
+  - `backend/internal/server/**`、`backend/internal/health/**`、`backend/internal/checkout/**`、`backend/internal/failmode/**` だけの変更では動きません。検証用のアプリだけが読み込むパッケージで、notifier のコードは変わらないためです
   - `.github/workflows/cd-notifier.yaml`、`.github/workflows/scripts/cd-notifier/**`
 - `workflow_dispatch` で手で流したとき。ref には `main` を選びます。ロールは `main` のトークンしか信頼しないため、ほかのブランチやタグを選ぶと AWS の認証で失敗します
 - 同時には 1 つずつ流れます (`concurrency: cd-notifier`)。途中の実行は打ち切りません
