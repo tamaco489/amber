@@ -2,6 +2,8 @@ name: cd-notifier
 
 # main への push で、通知の Lambda (backend/cmd/notifier) のコードを置き換える
 #   - notifier のビルドに関わるファイル (notifier の main、internal/、go.mod、go.sum) と、このワークフローを変えたときだけ動く
+#   - internal/ のうち、検証用のアプリだけが読み込むパッケージ (server、health、checkout) は除く。notifier のコードは変わらないため
+# DOC: https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#onpushpull_requestpull_request_targetpathspaths-ignore
 # 流し直すときは workflow_dispatch で、起動時に ref として main を選ぶ
 #   - notifier 用のロールは main のブランチから発行されたトークンしか信頼しないため、ほかのブランチやタグを選ぶと AWS の認証で失敗する
 on:
@@ -11,6 +13,9 @@ on:
     paths:
       - "backend/cmd/notifier/**"
       - "backend/internal/**"
+      - "!backend/internal/server/**"
+      - "!backend/internal/health/**"
+      - "!backend/internal/checkout/**"
       - "backend/go.mod"
       - "backend/go.sum"
       - ".github/workflows/cd-notifier.yaml"
