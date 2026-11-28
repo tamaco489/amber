@@ -46,16 +46,16 @@ jobs:
       # OIDC のトークンを発行して、deploy 用のロールを引き受けるため
       id-token: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # ロールの ARN はリポジトリの Variables (AWS_DEPLOY_ROLE_ARN) に置く
-      - uses: aws-actions/configure-aws-credentials@v6
+      - uses: aws-actions/configure-aws-credentials@45666896f5d8e0f10ae255413f3a4cdd03bdc8f5 # v6.3.1
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - id: ecr
-        uses: aws-actions/amazon-ecr-login@v2
+        uses: aws-actions/amazon-ecr-login@7290e214a610b32bc0eef81748948b6d466a8783 # v2.2.0
 
       # ECR はタグの上書きを禁止しているため、同じタグを流し直すとき (ロールバックや再デプロイ) は push しない
       - name: Find pushed image
@@ -63,13 +63,13 @@ jobs:
         run: .github/workflows/scripts/cd-backend/find-image.sh
 
       - if: steps.existing.outputs.digest == ''
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       # provenance と sbom を付けると、タグの付いたイメージインデックスと、タグなしの子のイメージに分かれる
       # タグなしのイメージは ECR のライフサイクルで 1 日後に消されるため、付けずに 1 つのイメージにする
       - if: steps.existing.outputs.digest == ''
         id: build
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: backend
           platforms: linux/arm64
