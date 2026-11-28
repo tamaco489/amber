@@ -25,7 +25,7 @@ concurrency:
   group: ci-loadtest-${{ github.ref }}
   cancel-in-progress: true
 
-# k6 の版は loadtest/justfile の k6_image だけで決める。ここでは just のレシピを呼び、版を書かない
+# k6 の版は loadtest/Dockerfile の FROM の行 (loadtest/justfile の k6_image が読む) だけで決める。ここでは just のレシピを呼び、版を書かない
 # just は手元で動作を確かめたバージョンに合わせる
 env:
   JUST_VERSION: 1.46.0

@@ -1,6 +1,8 @@
 # k6 は手元に入れず、版を固定したコンテナで動かす (Docker は backend のビルドでも使う)
-# DOC: https://hub.docker.com/r/grafana/k6
-k6_image := "grafana/k6:2.4.0"
+#   - イメージ (タグとダイジェスト) は Dockerfile の FROM の行で決める。Dependabot が上げられるようにするため
+#   - FROM の行が無いときは、awk が 0 以外で終わり、just がレシピを動かす前に止まる
+# DOC: https://just.systems/man/en/functions.html
+k6_image := shell("awk '$1 == \"FROM\" { print $2; found = 1; exit } END { exit !found }' \"$1\"", source_directory() / "Dockerfile")
 
 # 送り先 (run の target で選ぶ)
 #   - local: 手元のコンテナ (just backend::run)。コンテナの中の k6 から、手元の 8080 番に送る
