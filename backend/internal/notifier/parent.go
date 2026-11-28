@@ -76,7 +76,7 @@ func (n *Notifier) postParent(ctx context.Context, ev *deploy.Event, key string)
 	}
 	p.Apply(ev)
 
-	ts, err := n.Slack.PostMessage(ctx, slack.ParentMessage(p))
+	ts, err := n.Slack.PostMessage(ctx, slack.WithMention(slack.ParentMessage(p), n.parentMention(p)))
 	if err != nil {
 		n.release(ctx, key)
 		return nil, fmt.Errorf("%s: %w", key, err)

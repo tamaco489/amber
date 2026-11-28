@@ -15,8 +15,9 @@ var reactions = map[deploy.Kind]string{
 
 // reply は、イベントをスレッドに返信する
 func (n *Notifier) reply(ctx context.Context, ev *deploy.Event, parent *deploy.Parent) error {
+	msg := slack.WithMention(slack.ReplyMessage(ev, parent.Channel, parent.TS), n.replyMention(ev, parent))
 	return n.step(ctx, ev.ID+"#reply", func() error {
-		_, err := n.Slack.PostMessage(ctx, slack.ReplyMessage(ev, parent.Channel, parent.TS))
+		_, err := n.Slack.PostMessage(ctx, msg)
 		return err
 	})
 }
