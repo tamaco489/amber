@@ -47,26 +47,25 @@ func TestRequestValidate(t *testing.T) {
 			},
 			wantErr: "items[0].quantity is required",
 		},
-		"unit_price が無ければエラーにする": {
+		"unit_price が無くてもエラーにしない": {
 			req: request{
 				Items:             []item{{SKU: new("TSHIRT-BLK-M"), Quantity: new(2)}},
 				ShippingAddressID: new("addr_01"),
 			},
-			wantErr: "items[0].unit_price is required",
 		},
 		"足りない項目が複数あれば、一覧の先にある項目でエラーにする": {
 			req: request{
-				Items:             []item{{SKU: new("TSHIRT-BLK-M")}},
+				Items:             []item{{UnitPrice: new(2980)}},
 				ShippingAddressID: new("addr_01"),
 			},
-			wantErr: "items[0].quantity is required",
+			wantErr: "items[0].sku is required",
 		},
 		"値の誤りより、足りない項目のエラーを先に返す": {
 			req: request{
-				Items:             []item{{SKU: new("UNKNOWN"), Quantity: new(1), UnitPrice: new(1)}, {SKU: new("MUG-RED"), Quantity: new(1)}},
+				Items:             []item{{SKU: new("UNKNOWN"), Quantity: new(1), UnitPrice: new(1)}, {SKU: new("MUG-RED")}},
 				ShippingAddressID: new("addr_01"),
 			},
-			wantErr: "items[1].unit_price is required",
+			wantErr: "items[1].quantity is required",
 		},
 		"知らない sku ならエラーにする": {
 			req: request{

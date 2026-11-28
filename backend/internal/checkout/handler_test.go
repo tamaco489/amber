@@ -19,15 +19,20 @@ func TestHandle(t *testing.T) {
 			wantStatus: http.StatusOK,
 			wantBody:   map[string]any{"total": float64(5960), "version": "v7"},
 		},
-		"unit_price が無ければ、400 と足りない項目を返す": {
+		"unit_price が無くても、サーバーの単価で合計を返す": {
 			body:       `{"items":[{"sku":"TSHIRT-BLK-M","quantity":2}],"shipping_address_id":"addr_01"}`,
-			wantStatus: http.StatusBadRequest,
-			wantBody:   map[string]any{"error": "items[0].unit_price is required", "version": "v7"},
+			wantStatus: http.StatusOK,
+			wantBody:   map[string]any{"total": float64(5960), "version": "v7"},
 		},
-		"unit_price が null なら、無いものとして 400 を返す": {
+		"unit_price が null でも、サーバーの単価で合計を返す": {
 			body:       `{"items":[{"sku":"TSHIRT-BLK-M","quantity":2,"unit_price":null}],"shipping_address_id":"addr_01"}`,
+			wantStatus: http.StatusOK,
+			wantBody:   map[string]any{"total": float64(5960), "version": "v7"},
+		},
+		"必須の項目が無ければ、400 と足りない項目を返す": {
+			body:       `{"items":[{"sku":"TSHIRT-BLK-M"}],"shipping_address_id":"addr_01"}`,
 			wantStatus: http.StatusBadRequest,
-			wantBody:   map[string]any{"error": "items[0].unit_price is required", "version": "v7"},
+			wantBody:   map[string]any{"error": "items[0].quantity is required", "version": "v7"},
 		},
 		"本文が JSON でなければ 400 を返す": {
 			body:       `not json`,
