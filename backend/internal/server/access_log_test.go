@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"bytes"
@@ -13,27 +13,26 @@ func TestWithAccessLog(t *testing.T) {
 	tests := map[string]struct {
 		method     string
 		path       string
+		handler    http.HandlerFunc
 		wantStatus int
 	}{
-		"バージョンを返したリクエストを出す": {
+		"ステータスを書かずに返したリクエストは 200 で出す": {
 			method:     http.MethodGet,
 			path:       "/",
-			wantStatus: http.StatusOK,
-		},
-		"ヘルスチェックも出す": {
-			method:     http.MethodGet,
-			path:       "/health",
+			handler:    func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte("ok")) },
 			wantStatus: http.StatusOK,
 		},
 		"エラーを返したリクエストは、そのステータスで出す": {
-			method:     http.MethodGet,
-			path:       "/?sleep=abc",
+			method:     http.MethodPost,
+			path:       "/v1/carts/cart_01/checkout",
+			handler:    func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusBadRequest) },
 			wantStatus: http.StatusBadRequest,
 		},
-		"知らないパスは 404 で出す": {
+		"クエリはパスに含めない": {
 			method:     http.MethodGet,
-			path:       "/unknown",
-			wantStatus: http.StatusNotFound,
+			path:       "/?sleep=abc",
+			handler:    func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusBadRequest) },
+			wantStatus: http.StatusBadRequest,
 		},
 	}
 
@@ -44,7 +43,7 @@ func TestWithAccessLog(t *testing.T) {
 			slog.SetDefault(slog.New(slog.NewJSONHandler(&buf, nil)))
 			t.Cleanup(func() { slog.SetDefault(restore) })
 
-			h := withAccessLog(newMux("v1"), "v1")
+			h := WithAccessLog(tt.handler, "v1")
 			req := httptest.NewRequestWithContext(t.Context(), tt.method, tt.path, nil)
 			h.ServeHTTP(httptest.NewRecorder(), req)
 

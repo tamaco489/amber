@@ -15,6 +15,13 @@ WORKDIR /src
 COPY go.mod ./
 COPY cmd ./cmd
 
+# アプリが読み込む internal のパッケージだけを入れる
+#   - 通知の Lambda だけが使うパッケージ (AWS の SDK に依存する) を変えても、イメージの層を作り直さないため
+#   - アプリが読み込むパッケージを足したら、ここにも足す (足りなければビルドが失敗する)
+COPY internal/server ./internal/server
+COPY internal/health ./internal/health
+COPY internal/checkout ./internal/checkout
+
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
     go build -trimpath -ldflags "-s -w -X main.version=${VERSION}" -o /out/api ./cmd/api
 

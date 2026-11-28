@@ -37,6 +37,23 @@ run rate="10" duration="5m" target="local":
         -e DURATION={{ duration }} \
         /scripts/availability.js
 
+# 注文の確定に、新旧のクライアント (unit_price を送らない・送る) から同時に送り、版とステータスごとの件数を出す
+#   - 例: just loadtest::checkout 10 10m prd
+#   - rate はシナリオごとの RPS (2 つのシナリオで、合わせて rate の 2 倍になる)
+#   - 古い版が新しいクライアントに返す 400 (unit_price が無い) は、想定どおりとして失敗に数えない
+#   - それ以外の失敗が 1 件でもあれば 99 で終わる
+#   - 送り先と値の渡し方は run と同じ
+[doc("新旧のクライアントで注文の確定を送り、版とステータスごとの件数を出す (想定外が 1 件でもあれば 99 で終わる)")]
+checkout rate="10" duration="10m" target="local":
+    docker run --rm -i \
+        --add-host=host.docker.internal:host-gateway \
+        -v "{{ source_directory() }}/scripts:/scripts:ro" \
+        {{ k6_image }} run \
+        -e BASE_URL={{ if target == "local" { local_url } else if target == "prd" { prd_url } else { error("target は local か prd を渡す: " + target) } }} \
+        -e RATE={{ rate }} \
+        -e DURATION={{ duration }} \
+        /scripts/checkout.js
+
 
 # ==========================================================================================
 # 手元の送り先
@@ -66,3 +83,12 @@ inspect rate="10" duration="5m":
         -e RATE={{ rate }} \
         -e DURATION={{ duration }} \
         /scripts/availability.js
+
+# checkout.js を読み込み、組み立てた設定 (2 つのシナリオと閾値) を表示する。リクエストは送らない
+inspect-checkout rate="10" duration="10m":
+    docker run --rm -i \
+        -v "{{ source_directory() }}/scripts:/scripts:ro" \
+        {{ k6_image }} inspect --execution-requirements \
+        -e RATE={{ rate }} \
+        -e DURATION={{ duration }} \
+        /scripts/checkout.js
