@@ -1,6 +1,6 @@
 # cost-check: AWS MCP の run_script に、このファイルの中身をそのまま渡す (書き換えない)
 #   - CLI (scripts/cli/check.sh) とは別の経路で、時間課金のリソース (ECS、ELB、VPC エンドポイント、NAT、EC2、ENI、EIP、EBS、
-#     オートスケーリング) と CloudWatch アラームを読み取りで確かめる
+#     オートスケーリング) と CloudWatch アラームと、tfstate のバケットの古い版を読み取りで確かめる
 #   - run_script では globals 関数などが禁止されている。実行環境が用意する call_boto3 は、そのまま参照する
 #   - 読み取りの API (Describe* / List* / Get*) だけを呼ぶ
 #   - 並び順を固定し、時刻は JST で返す。同じ状態なら、時刻を除いて同じ結果になる
@@ -13,6 +13,12 @@ from typing import Any
 
 REGION = "ap-northeast-1"
 JST = datetime.timezone(datetime.timedelta(hours=9))
+DAY = 86400
+
+# tfstate のバケットのライフサイクル (infra/tfstate/lifecycle.json) の値と、消える条件を満たしてから待つ日数
+NONCURRENT_DAYS = 1
+NEWER_NONCURRENT_VERSIONS = 10
+GRACE_DAYS = 3
 
 
 def now():
@@ -35,6 +41,63 @@ def pick(resp: dict[str, Any], fn: Any) -> Any:
     return fn(resp)
 
 
+def epoch(last_modified: str) -> int:
+    return int(datetime.datetime.fromisoformat(last_modified).timestamp())
+
+
+def jst(t: int) -> str:
+    return datetime.datetime.fromtimestamp(t, JST).strftime("%Y-%m-%d %H:%M:%S")
+
+
+def next_utc_midnight(t: int) -> int:
+    return (t // DAY + 1) * DAY
+
+
+def tfstate_key(entries: list[dict[str, Any]], now_epoch: int) -> dict[str, Any]:
+    # 今の版を先頭に、古い版を新しい順に並べる。古い版 n 番目 (all_[n]) は、all_[n - 1] が作られた時刻に古い版になった
+    current = [e for e in entries if e["latest"]]
+    noncurrent = sorted([e for e in entries if not e["latest"]], key=lambda e: -e["t"])
+    all_ = current + noncurrent
+    excess = []
+    for n in range(NEWER_NONCURRENT_VERSIONS + 1, len(all_)):
+        # 日数の条件 (古い版になってからの日数を、次の UTC 0 時に切り上げる) と、数の条件 (新しい古い版がそろった時刻) の遅いほう
+        eligible = max(
+            next_utc_midnight(all_[n - 1]["t"] + NONCURRENT_DAYS * DAY),
+            all_[n - NEWER_NONCURRENT_VERSIONS - 1]["t"],
+        )
+        excess.append({
+            "noncurrentSinceJst": jst(all_[n - 1]["t"]),
+            "eligibleAtJst": jst(eligible),
+            "deadlineJst": jst(eligible + GRACE_DAYS * DAY),
+            "overdue": now_epoch > eligible + GRACE_DAYS * DAY,
+        })
+    overdue = len([x for x in excess if x["overdue"]])
+    verdict = "OK"
+    if excess:
+        verdict = "OK_PENDING"
+    if overdue > 0:
+        verdict = "NG"
+    return {
+        "key": all_[0]["key"],
+        "noncurrent": len(all_) - 1,
+        "excess": len(excess),
+        "overdue": overdue,
+        "verdict": verdict,
+        "excessVersions": [{k: v for k, v in x.items() if k != "overdue"} for x in excess],
+    }
+
+
+def tfstate_versions(resp: dict[str, Any]) -> list[dict[str, Any]]:
+    # scripts/cli/checks/storage.sh の tfstate の確認と、同じ値と判定を返す (判定の決め方は storage.sh のコメントを参照)
+    # DOC: https://docs.aws.amazon.com/AmazonS3/latest/userguide/intro-lifecycle-rules.html
+    # DOC: https://repost.aws/knowledge-center/s3-lifecycle-rule-delay
+    now_epoch = int(datetime.datetime.now(datetime.timezone.utc).timestamp())
+    entries = [{"key": x["Key"], "latest": x["IsLatest"], "t": epoch(x["LastModified"])}
+               for x in resp.get("Versions", []) + resp.get("DeleteMarkers", [])]
+    keys = sorted({e["key"] for e in entries})
+    return [tfstate_key([e for e in entries if e["key"] == k], now_epoch) for k in keys]
+
+
 async def main():
     started_at = now()
 
@@ -54,7 +117,7 @@ async def main():
     vpc_filter = [{"Name": "vpc-id", "Values": [vpc_id or "none"]}]
 
     amber_tag = [{"Name": "tag:project", "Values": ["amber"]}]
-    clusters, lbs, tgs, endpoints, nats, instances, enis, eips, volumes, scalable, alarms = await asyncio.gather(
+    clusters, lbs, tgs, endpoints, nats, instances, enis, eips, volumes, scalable, alarms, versions = await asyncio.gather(
         call("ecs", "DescribeClusters", {"clusters": ["prd-amber"]}),
         call("elbv2", "DescribeLoadBalancers"),
         call("elbv2", "DescribeTargetGroups"),
@@ -66,6 +129,7 @@ async def main():
         call("ec2", "DescribeVolumes", {"Filters": amber_tag}),
         call("application-autoscaling", "DescribeScalableTargets", {"ServiceNamespace": "ecs"}),
         call("cloudwatch", "DescribeAlarms"),
+        call("s3", "ListObjectVersions", {"Bucket": "prd-amber-tfstate"}),
     )
 
     return {
@@ -103,6 +167,7 @@ async def main():
         "alarms": pick(alarms, lambda r: sorted(
             [a["AlarmName"] for a in r.get("MetricAlarms", []) + r.get("CompositeAlarms", [])
                 if "prd-amber" in a["AlarmName"]])),
+        "tfstateVersions": pick(versions, tfstate_versions),
         "finishedAtJst": now(),
     }
 
