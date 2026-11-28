@@ -1,7 +1,8 @@
 // api は、ECS のデプロイ戦略を確かめるための検証用アプリ
 //   - /health、/: どの版が動いているかを確かめる (internal/health)
 //   - /v1/carts/{cart_id}/checkout: 注文を確定する (internal/checkout)
-//   - ルーティングとアクセスログは internal/server。ここでは起動と終了だけを持つ
+//   - ルーティングとアクセスログは internal/server。ここでは起動と終了、ハンドラーの組み立て (handlers.go) だけを持つ
+//   - 版の名前が -fail-exit / -fail-health で終わるときは、わざと失敗する (internal/failmode)
 package main
 
 import (
@@ -14,8 +15,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/tamaco489/amber/backend/internal/checkout"
-	"github.com/tamaco489/amber/backend/internal/health"
+	"github.com/tamaco489/amber/backend/internal/failmode"
 	"github.com/tamaco489/amber/backend/internal/server"
 )
 
@@ -34,21 +34,25 @@ func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
 
-	if err := run(); err != nil {
+	// -fail-exit の版は、HTTP サーバーを立てる前に終わる (起動の途中で落ちるアプリの真似)
+	//   - タスクが RUNNING のまま続かないため、デプロイのサーキットブレーカーが失敗と数える
+	mode := failmode.FromVersion(version)
+	if mode == failmode.Exit {
+		slog.Error("exiting on purpose before starting the server", "version", version, "mode", mode)
+		os.Exit(1)
+	}
+
+	if err := run(mode); err != nil {
 		slog.Error("server stopped with error", "error", err)
 		os.Exit(1)
 	}
 }
 
-func run() error {
+func run(mode failmode.Mode) error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer stop()
 
-	mux := server.NewMux(&server.Handlers{
-		Health:   health.Check,
-		Version:  health.Version(version),
-		Checkout: checkout.Handle(version),
-	})
+	mux := server.NewMux(newHandlers(version, mode))
 	srv := &http.Server{
 		Addr:              addr,
 		Handler:           server.WithAccessLog(mux, version),
@@ -57,7 +61,7 @@ func run() error {
 
 	errCh := make(chan error, 1)
 	go func() {
-		slog.Info("server started", "addr", addr, "version", version)
+		slog.Info("server started", "addr", addr, "version", version, "mode", mode)
 		errCh <- srv.ListenAndServe()
 	}()
 

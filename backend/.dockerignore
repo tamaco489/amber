@@ -7,3 +7,4 @@
 !internal/server/
 !internal/health/
 !internal/checkout/
+!internal/failmode/

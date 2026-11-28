@@ -19,6 +19,18 @@ func TestCheck(t *testing.T) {
 	}
 }
 
+func TestFailingCheck(t *testing.T) {
+	rec := httptest.NewRecorder()
+	FailingCheck(rec, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/health", nil))
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Errorf("status = %d, want %d", rec.Code, http.StatusInternalServerError)
+	}
+	if want := "fail-health: this version fails the health check on purpose\n"; rec.Body.String() != want {
+		t.Errorf("body = %q, want %q", rec.Body.String(), want)
+	}
+}
+
 func TestVersion(t *testing.T) {
 	tests := map[string]struct {
 		path       string

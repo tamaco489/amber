@@ -16,6 +16,13 @@ func Check(w http.ResponseWriter, _ *http.Request) {
 	_, _ = w.Write([]byte("ok\n"))
 }
 
+// FailingCheck は、ALB のヘルスチェックに 500 を返し続ける
+//   - 版の名前が -fail-health で終わるときに、Check の代わりに使う (internal/failmode)
+//   - プロセスは動くがヘルスチェックに通らない版を作り、デプロイのサーキットブレーカーが元の版に戻すかを確かめるため
+func FailingCheck(w http.ResponseWriter, _ *http.Request) {
+	http.Error(w, "fail-health: this version fails the health check on purpose", http.StatusInternalServerError)
+}
+
 // Version は、バージョン番号を返す
 //   - ?sleep=5s のように指定すると、その時間だけ待ってから返す (SIGTERM を受けたときに、処理中のリクエストを終えてから止まるかを確かめるため)
 func Version(version string) http.HandlerFunc {
