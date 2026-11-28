@@ -64,6 +64,18 @@ ECS のサービスは、最初は ECR の `bootstrap` のタグのイメージ�
 
 `bootstrap` のイメージは、ECR のライフサイクルで消えないようにしています (古いものを消すのは `v*` のタグだけ)。消えると、`enable_runtime = true` の plan がエラーになります。push し直すには `just backend::push bootstrap` を実行します。
 
+### 起動した直後に名前を引けないとき
+
+`ecs-lab.tamaco-blog.jp` のレコードは、止めている間は消えています。**apply が終わる前に名前を引くと、手元の PC が「その名前は無い」(NXDOMAIN) という答えを覚えます。** apply が終わってレコードができたあとも、しばらく `Could not resolve host` になります。
+
+- 「無い」という答えを覚えておく時間は、`tamaco-blog.jp` の SOA で決まります。TTL が 900 秒、minimum が 86400 秒なので、短いほうの 15 分ほどです
+- 名前を引くのは、apply が終わってからにします
+- 引けないときは、手元 (macOS) の DNS のキャッシュを消します
+
+```sh
+sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder
+```
+
 ## 新しいリソースを足すとき
 
 時間課金のリソースや、置いておくだけで料金がかかるリソースは、`enable_runtime` で消えるモジュールに入れます。
@@ -78,3 +90,4 @@ ECS のサービスは、最初は ECR の `bootstrap` のタグのイメージ�
 - [AWS Fargate の料金](https://aws.amazon.com/fargate/pricing/)
 - [Amazon VPC の料金 (パブリック IPv4 アドレス)](https://aws.amazon.com/vpc/pricing/)
 - [Amazon CloudWatch の料金](https://aws.amazon.com/cloudwatch/pricing/)
+- [RFC 2308: DNS の「無い」という答えのキャッシュ](https://www.rfc-editor.org/rfc/rfc2308)
