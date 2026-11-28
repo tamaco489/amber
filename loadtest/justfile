@@ -21,11 +21,15 @@ default:
 #   - target は送り先の名前 (local か prd)。既定は local で、prd に送るときだけ prd を付ける
 #   - local と prd 以外の名前は、k6 を動かす前に error() で止める
 #   - 値はコンテナの環境変数 (docker run -e) ではなく、k6 の -e で渡す (inspect とそろえる)
+#   - host.docker.internal は Docker Desktop では引けるが、Linux (CI の runner) では引けない
+#     --add-host で host-gateway (コンテナから見た手元の IP) に向け、どちらでも local に送れるようにする
 # DOC: https://just.systems/man/en/conditional-expressions.html
 # DOC: https://just.systems/man/en/functions.html
+# DOC: https://docs.docker.com/reference/cli/docker/container/run/#add-host
 [doc("一定の RPS で送り、失敗の種類と新旧の版ごとの件数を出す (1 件でも失敗すれば 99 で終わる)")]
 run rate="10" duration="5m" target="local":
     docker run --rm -i \
+        --add-host=host.docker.internal:host-gateway \
         -v "{{ source_directory() }}/scripts:/scripts:ro" \
         {{ k6_image }} run \
         -e BASE_URL={{ if target == "local" { local_url } else if target == "prd" { prd_url } else { error("target は local か prd を渡す: " + target) } }} \

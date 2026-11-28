@@ -1,0 +1,80 @@
+name: ci-loadtest
+
+# k6 のスクリプトに加え、送り先のアプリ (イメージの材料と、ビルド・起動のレシピ) を変えたときも動かす
+# アプリの変更で k6 が通らなくなる (本文の形が変わり、版を読めなくなるなど) のに、PR の時点で気づくため
+on:
+  pull_request:
+    paths:
+      - "loadtest/**"
+      - "backend/cmd/api/**"
+      - "backend/Dockerfile"
+      - "backend/go.mod"
+      - "backend/justfile"
+      - "justfile"
+      - ".github/workflows/ci-loadtest.yaml"
+
+permissions:
+  contents: read
+
+# 同じ PR への連続 push で、古い実行を打ち切る
+concurrency:
+  group: ci-loadtest-${{ github.ref }}
+  cancel-in-progress: true
+
+# k6 の版は loadtest/justfile の k6_image だけで決める。ここでは just のレシピを呼び、版を書かない
+# just は手元で動作を確かめたバージョンに合わせる
+env:
+  JUST_VERSION: 1.46.0
+
+jobs:
+  # ============================================================
+  # inspect
+  # ============================================================
+  # k6 inspect でスクリプトを読み込み、シナリオと閾値を組み立てる。リクエストは送らない
+  # import のパスの誤りや構文の誤り、options の組み立ての失敗があると失敗する
+  loadtest-inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: extractions/setup-just@v4
+        with:
+          just-version: ${{ env.JUST_VERSION }}
+
+      - name: Inspect
+        run: just loadtest::inspect 5 5s
+
+  # ============================================================
+  # run
+  # ============================================================
+  # アプリのイメージをビルドして runner の中で動かし、k6 を数秒流す。送り先は runner の中のコンテナだけ
+  # 1 件でも失敗するか、setup で古い版を読めないと、k6 が 0 以外で終わり失敗する
+  # イメージは ECS と同じ linux/arm64 でビルドするため、エミュレーションの要らない arm64 の runner で動かす
+  # DOC: https://docs.github.com/en/actions/reference/runners/github-hosted-runners
+  loadtest-run:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: extractions/setup-just@v4
+        with:
+          just-version: ${{ env.JUST_VERSION }}
+
+      # ビルドのキャッシュ (type=gha) は使わない。mode=max ではベースイメージの層まで書き出し、
+      # backend/cmd/api/ を変えた PR では毎回 Go のビルドからやり直すため、書き出しの分だけ遅くなる
+      - name: Build app image
+        run: just backend::build old
+
+      # backend::run は前面で動くため、裏で動かし、/health が 200 を返すまで待つ
+      - name: Start app
+        run: |
+          just backend::run old > "${RUNNER_TEMP}/api.log" 2>&1 &
+          curl -fsS --retry 30 --retry-connrefused --retry-delay 1 http://localhost:8080/health
+
+      - name: Run k6
+        run: just loadtest::run 5 5s
+
+      - name: Show app logs
+        if: failure()
+        run: cat "${RUNNER_TEMP}/api.log"
