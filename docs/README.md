@@ -38,20 +38,20 @@ The findings are kept as material for choosing settings.
 Tools used on local machines. Go, golangci-lint, Terraform, tflint and trivy are pinned in `.tool-versions` (asdf), which both local machines and CI read.
 actionlint and shellcheck are pinned in `ci-actions.yaml`, k6 by the container image in `loadtest/justfile`, and just in CI by `ci-loadtest.yaml`. The others are not pinned; the versions shown are the ones confirmed to work.
 
-| Tool          | Version | Used for                                                       |
-| ------------- | ------- | -------------------------------------------------------------- |
-| Go            | 1.27.4  | The test application (`/health` and `/` returning its version) |
-| golangci-lint | 2.15.0  | Linting and format checks for Go                               |
-| Docker        | 29.8.2  | Building `linux/arm64` images                                  |
-| Terraform     | 1.17.2  | Defining AWS resources                                         |
-| tflint        | 0.66.0  | Linting Terraform (including the AWS ruleset)                  |
-| trivy         | 0.76.2  | Scanning Terraform for misconfigurations                       |
-| AWS CLI       | 2.40.0  | Checking state, updating the prefix list, logging in to ECR    |
-| k6            | 2.4.0   | Load testing during deployments (`loadtest/justfile`)          |
-| just          | 1.46.0  | Task recipes (`just backend::push`, `just infra::plan`, ...)   |
-| actionlint    | 1.7.12  | Linting GitHub Actions workflows (pinned in `ci-actions.yaml`) |
-| shellcheck    | 0.11.0  | Linting shell scripts (pinned in `ci-actions.yaml`)            |
-| asdf          | 0.18.0  | Managing tool versions (`.tool-versions`)                      |
+| Tool          | Version | Used for                                                                                                                 |
+| ------------- | ------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Go            | 1.27.4  | The test application (`/health`, `/` returning its version, and `POST /v1/carts/{cart_id}/checkout` confirming an order) |
+| golangci-lint | 2.15.0  | Linting and format checks for Go                                                                                         |
+| Docker        | 29.8.2  | Building `linux/arm64` images                                                                                            |
+| Terraform     | 1.17.2  | Defining AWS resources                                                                                                   |
+| tflint        | 0.66.0  | Linting Terraform (including the AWS ruleset)                                                                            |
+| trivy         | 0.76.2  | Scanning Terraform for misconfigurations                                                                                 |
+| AWS CLI       | 2.40.0  | Checking state, updating the prefix list, logging in to ECR                                                              |
+| k6            | 2.4.0   | Load testing during deployments (`loadtest/justfile`)                                                                    |
+| just          | 1.46.0  | Task recipes (`just backend::push`, `just infra::plan`, ...)                                                             |
+| actionlint    | 1.7.12  | Linting GitHub Actions workflows (pinned in `ci-actions.yaml`)                                                           |
+| shellcheck    | 0.11.0  | Linting shell scripts (pinned in `ci-actions.yaml`)                                                                      |
+| asdf          | 0.18.0  | Managing tool versions (`.tool-versions`)                                                                                |
 
 ## Documents
 

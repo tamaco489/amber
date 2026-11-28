@@ -38,20 +38,20 @@ ECS は、CodeDeploy を使わずにブルー/グリーン (2025 年 7 月)、�
 手元で使うツールです。Go、golangci-lint、Terraform、tflint、trivy のバージョンは `.tool-versions` (asdf) で固定し、手元と CI の両方がここを読みます。
 actionlint と shellcheck は `ci-actions.yaml` で、k6 は `loadtest/justfile` のコンテナのイメージで、CI の just は `ci-loadtest.yaml` で固定しています。それ以外は固定しておらず、動作を確かめたバージョンを書いています。
 
-| ツール        | バージョン | 用途                                                           |
-| ------------- | ---------- | -------------------------------------------------------------- |
-| Go            | 1.27.4     | 検証用のアプリ (`/health` と、バージョン番号を返す `/`)        |
-| golangci-lint | 2.15.0     | Go の lint と整形の検査                                        |
-| Docker        | 29.8.2     | `linux/arm64` のイメージのビルド                               |
-| Terraform     | 1.17.2     | AWS のリソースの定義                                           |
-| tflint        | 0.66.0     | Terraform の lint (AWS のルールセットを含む)                   |
-| trivy         | 0.76.2     | Terraform の設定の脆弱性の検査                                 |
-| AWS CLI       | 2.40.0     | 状態の確認、プレフィックスリストの更新、ECR へのログイン       |
-| k6            | 2.4.0      | デプロイ中の負荷試験 (`loadtest/justfile` で固定)              |
-| just          | 1.46.0     | 作業のレシピ (`just backend::push`、`just infra::plan` など)   |
-| actionlint    | 1.7.12     | GitHub Actions のワークフローの検査 (`ci-actions.yaml` で固定) |
-| shellcheck    | 0.11.0     | シェルスクリプトの検査 (`ci-actions.yaml` で固定)              |
-| asdf          | 0.18.0     | ツールのバージョンの管理 (`.tool-versions`)                    |
+| ツール        | バージョン | 用途                                                                                                     |
+| ------------- | ---------- | -------------------------------------------------------------------------------------------------------- |
+| Go            | 1.27.4     | 検証用のアプリ (`/health`、バージョン番号を返す `/`、注文を確定する `POST /v1/carts/{cart_id}/checkout`) |
+| golangci-lint | 2.15.0     | Go の lint と整形の検査                                                                                  |
+| Docker        | 29.8.2     | `linux/arm64` のイメージのビルド                                                                         |
+| Terraform     | 1.17.2     | AWS のリソースの定義                                                                                     |
+| tflint        | 0.66.0     | Terraform の lint (AWS のルールセットを含む)                                                             |
+| trivy         | 0.76.2     | Terraform の設定の脆弱性の検査                                                                           |
+| AWS CLI       | 2.40.0     | 状態の確認、プレフィックスリストの更新、ECR へのログイン                                                 |
+| k6            | 2.4.0      | デプロイ中の負荷試験 (`loadtest/justfile` で固定)                                                        |
+| just          | 1.46.0     | 作業のレシピ (`just backend::push`、`just infra::plan` など)                                             |
+| actionlint    | 1.7.12     | GitHub Actions のワークフローの検査 (`ci-actions.yaml` で固定)                                           |
+| shellcheck    | 0.11.0     | シェルスクリプトの検査 (`ci-actions.yaml` で固定)                                                        |
+| asdf          | 0.18.0     | ツールのバージョンの管理 (`.tool-versions`)                                                              |
 
 ## ドキュメント
 
