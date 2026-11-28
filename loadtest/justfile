@@ -35,6 +35,21 @@ run rate="10" duration="5m" target="local":
 
 
 # ==========================================================================================
+# 手元の送り先
+# ==========================================================================================
+# 版の値を old か new にしてアプリのイメージをビルドし、手元の 8080 番で前面で動かす (Ctrl-C で止まる)
+#   - 入れ替えを試すときは、old で動かして run を流し、途中で Ctrl-C で止めて new で動かす
+#   - old と new 以外は、ビルドの前に error() で止める
+#   - ビルドと起動は backend のレシピ (build、run) を呼ぶ。just のモジュールは、ほかのモジュールのレシピを
+#     依存に書けないため、just をルートの justfile (justfile() はモジュールの中でもルートを指す) で呼び直す
+# DOC: https://just.systems/man/en/modules.html
+# DOC: https://just.systems/man/en/functions.html
+serve version:
+    {{ just_executable() }} --justfile "{{ justfile() }}" backend::build {{ if version == "old" { version } else if version == "new" { version } else { error("version は old か new を渡す: " + version) } }}
+    {{ just_executable() }} --justfile "{{ justfile() }}" backend::run {{ version }}
+
+
+# ==========================================================================================
 # 静的検査
 # ==========================================================================================
 # スクリプトを読み込み、組み立てた設定 (シナリオと閾値) を表示する。リクエストは送らない
