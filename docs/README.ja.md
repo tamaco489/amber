@@ -36,7 +36,7 @@ ECS は、CodeDeploy を使わずにブルー/グリーン (2025 年 7 月)、�
 ## 利用ツール
 
 手元で使うツールです。Go、golangci-lint、Terraform、tflint、trivy のバージョンは `.tool-versions` (asdf) で固定し、手元と CI の両方がここを読みます。
-actionlint と shellcheck は `ci-actions.yaml` で固定しています。それ以外は固定しておらず、動作を確かめたバージョンを書いています。
+actionlint と shellcheck は `ci-actions.yaml` で、k6 は `loadtest/justfile` のコンテナのイメージで固定しています。それ以外は固定しておらず、動作を確かめたバージョンを書いています。
 
 | ツール        | バージョン | 用途                                                           |
 | ------------- | ---------- | -------------------------------------------------------------- |
@@ -47,7 +47,7 @@ actionlint と shellcheck は `ci-actions.yaml` で固定しています。そ�
 | tflint        | 0.66.0     | Terraform の lint (AWS のルールセットを含む)                   |
 | trivy         | 0.76.2     | Terraform の設定の脆弱性の検査                                 |
 | AWS CLI       | 2.40.0     | 状態の確認、プレフィックスリストの更新、ECR へのログイン       |
-| k6            | -          | デプロイ中の負荷試験                                           |
+| k6            | 2.4.0      | デプロイ中の負荷試験 (`loadtest/justfile` で固定)              |
 | just          | 1.46.0     | 作業のレシピ (`just backend::push`、`just infra::plan` など)   |
 | actionlint    | 1.7.12     | GitHub Actions のワークフローの検査 (`ci-actions.yaml` で固定) |
 | shellcheck    | 0.11.0     | シェルスクリプトの検査 (`ci-actions.yaml` で固定)              |
@@ -63,4 +63,5 @@ actionlint と shellcheck は `ci-actions.yaml` で固定しています。そ�
 | [タスク定義の変更の反映](./cd/task-definition.ja.md)        | Terraform で変えたタスク定義を、`cd-backend` でサービスに届ける手順                      |
 | [通知の Lambda のデプロイ](./cd/notifier.ja.md)             | 通知の Lambda のコードを、`main` への push で `cd-notifier` が置く仕組みと、流し直す手順 |
 | [ワークフローとスクリプトの検査](./ci/workflow-lint.ja.md)  | `ci-actions` が actionlint と shellcheck で検査する内容と、手元での流し方                |
+| [デプロイ中の負荷試験 (k6)](./loadtest/k6.ja.md)            | デプロイ中に k6 で負荷をかけ、失敗の種類とバージョンごとの件数を数える手順               |
 | [v\* のタグのルールセット](./github/tag-ruleset.ja.md)      | デプロイの起点の `v*` のタグを、作成・更新・削除できる人を管理者に絞る                   |

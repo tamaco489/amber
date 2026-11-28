@@ -7,14 +7,15 @@ AWS (東京) に Terraform で構築し、小さな Go のアプリを動かす�
 
 規約は `.claude/rules/` にあり、すべて読み込まれる。**このファイルには規約を再掲しない。**
 
-| ファイル                              | 内容                                                             |
-| ------------------------------------- | ---------------------------------------------------------------- |
-| `.claude/rules/notion/design-docs.md` | 設計とタスクの置き場所 (Notion)                                  |
-| `.claude/rules/github/labels.md`      | ラベルの一覧                                                     |
-| `.claude/rules/github/workflow.md`    | ブランチと PR の運用 (gh-flow との差分)                          |
-| `.claude/rules/aws/cost.md`           | 動かす時間を短くする検証の進め方                                 |
-| `.claude/rules/code/comments.md`      | コードのコメントの書き方 (出典の `DOC:`)                         |
-| `.claude/rules/code/go.md`            | Go のコードの書き方 (パッケージ、分岐、戻り値、コメント、テスト) |
+| ファイル                              | 内容                                                                                |
+| ------------------------------------- | ----------------------------------------------------------------------------------- |
+| `.claude/rules/notion/design-docs.md` | 設計とタスクの置き場所 (Notion)                                                     |
+| `.claude/rules/github/labels.md`      | ラベルの一覧                                                                        |
+| `.claude/rules/github/workflow.md`    | ブランチと PR の運用 (gh-flow との差分)                                             |
+| `.claude/rules/aws/cost.md`           | 動かす時間を短くする検証の進め方                                                    |
+| `.claude/rules/code/comments.md`      | コードのコメントの書き方 (出典の `DOC:`)                                            |
+| `.claude/rules/code/go.md`            | Go のコードの書き方 (パッケージ、分岐、戻り値、コメント、テスト)                    |
+| `.claude/rules/code/k6.md`            | k6 のスクリプトの書き方 (書くのは `k6-author` エージェント、構成、メトリクス、HTTP) |
 
 `docs/` は規約ではなく現状の説明を持つ。**構成を変更したら一緒に更新する。** 英語 (`.md`) と日本語 (`.ja.md`) の両方を揃える。
 
@@ -27,6 +28,7 @@ AWS (東京) に Terraform で構築し、小さな Go のアプリを動かす�
 | [docs/cd/task-definition.ja.md](docs/cd/task-definition.ja.md) | Terraform で変えたタスク定義を、`cd-backend` でサービスに届ける手順              | `cd-backend` の複製元を変えたとき                     |
 | [docs/cd/notifier.ja.md](docs/cd/notifier.ja.md)               | 通知の Lambda のコードを置く `cd-notifier` (動くとき、ロール、手順、流し直し)    | `cd-notifier` の動くとき・ロール・手順を変えたとき    |
 | [docs/ci/workflow-lint.ja.md](docs/ci/workflow-lint.ja.md)     | `ci-actions` の検査 (actionlint、shellcheck) と手元での流し方                    | 検査の対象・ツール・バージョンを変えたとき            |
+| [docs/loadtest/k6.ja.md](docs/loadtest/k6.ja.md)               | デプロイ中の k6 の負荷試験 (`loadtest/`) の閾値・失敗の種類・流し方              | 閾値・失敗の種類・k6 の版・レシピを変えたとき         |
 
 ## 費用を止める運用
 
