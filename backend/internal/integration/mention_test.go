@@ -25,15 +25,15 @@ func TestNotifyMention(t *testing.T) {
 		"開始が先に届くと、親の投稿の先頭でメンションし、書き換えでも付け直す": {
 			userIDs:    `{"tamaco489": "U0TEST"}`,
 			events:     []events.CloudWatchEvent{evStarted, evInProgress, evCompleted},
-			wantParent: "<@U0TEST> *:rocket: Deploying v3: prd-amber-api*",
+			wantParent: "<@U0TEST>\n*:rocket: Deploying v3: prd-amber-api*",
 			wantReplies: []string{
 				"*:rocket: Deploy started: v3*",
 				"*:hourglass_flowing_sand: Deployment in progress: prd-amber-api*",
 				"*:white_check_mark: Deployment completed: prd-amber-api*",
 			},
 			wantUpdates: []string{
-				"<@U0TEST> *:rocket: Deploying v3: prd-amber-api*",
-				"<@U0TEST> *:white_check_mark: Deployed v3: prd-amber-api*",
+				"<@U0TEST>\n*:rocket: Deploying v3: prd-amber-api*",
+				"<@U0TEST>\n*:white_check_mark: Deployed v3: prd-amber-api*",
 			},
 		},
 		"進行中が先に届くと、開始の返信の先頭でメンションし、そのあとの書き換えで親にも付ける": {
@@ -42,12 +42,12 @@ func TestNotifyMention(t *testing.T) {
 			wantParent: "*:rocket: Deploying: prd-amber-api*",
 			wantReplies: []string{
 				"*:hourglass_flowing_sand: Deployment in progress: prd-amber-api*",
-				"<@U0TEST> *:rocket: Deploy started: v3*",
+				"<@U0TEST>\n*:rocket: Deploy started: v3*",
 				"*:white_check_mark: Deployment completed: prd-amber-api*",
 			},
 			wantUpdates: []string{
-				"<@U0TEST> *:rocket: Deploying v3: prd-amber-api*",
-				"<@U0TEST> *:white_check_mark: Deployed v3: prd-amber-api*",
+				"<@U0TEST>\n*:rocket: Deploying v3: prd-amber-api*",
+				"<@U0TEST>\n*:white_check_mark: Deployed v3: prd-amber-api*",
 			},
 		},
 		"対応表に無い人には、親の投稿でも書き換えでもメンションしない": {
