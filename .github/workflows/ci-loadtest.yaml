@@ -7,7 +7,11 @@ on:
     paths:
       - "loadtest/**"
       - "backend/cmd/api/**"
+      - "backend/internal/server/**"
+      - "backend/internal/health/**"
+      - "backend/internal/checkout/**"
       - "backend/Dockerfile"
+      - "backend/.dockerignore"
       - "backend/go.mod"
       - "backend/justfile"
       - "justfile"
@@ -62,7 +66,7 @@ jobs:
           just-version: ${{ env.JUST_VERSION }}
 
       # ビルドのキャッシュ (type=gha) は使わない。mode=max ではベースイメージの層まで書き出し、
-      # backend/cmd/api/ を変えた PR では毎回 Go のビルドからやり直すため、書き出しの分だけ遅くなる
+      # アプリ (backend/cmd/api/ と、それが読み込む internal のパッケージ) を変えた PR では毎回 Go のビルドからやり直すため、書き出しの分だけ遅くなる
       - name: Build app image
         run: just backend::build old
 

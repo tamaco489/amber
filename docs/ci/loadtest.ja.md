@@ -22,7 +22,8 @@
 PR で、次を変えたときに動きます。
 
 - `loadtest/**`
-- アプリとイメージの材料: `backend/cmd/api/**`、`backend/Dockerfile`、`backend/go.mod`
+- アプリとイメージの材料: `backend/cmd/api/**`、`backend/Dockerfile`、`backend/.dockerignore`、`backend/go.mod`
+- アプリが読み込む `internal` のパッケージ: `backend/internal/server/**`、`backend/internal/health/**`、`backend/internal/checkout/**`。ほかの `internal` のパッケージは通知の Lambda だけが使うため、含めません
 - ビルドと起動のレシピ: `backend/justfile`、`justfile`
 - `.github/workflows/ci-loadtest.yaml`
 
