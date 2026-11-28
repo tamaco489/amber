@@ -56,6 +56,7 @@ EventBridge のルールがイベントを拾い、通知の Lambda (`backend/cm
 - Slack のメンションは、Slack のユーザー ID (`<@U...>`) で書く必要があります。GitHub のユーザー名では届きません。そのため、GitHub のユーザー名から Slack のユーザー ID を引く対応表を、SSM のパラメータ `/prd-amber/notification/slack-user-ids` に置きます (手順は下の「対応表に人を足す」)
 - 進行中が先に届いたときは、親を作る時点で起動した人が分かりません。あとから `chat.update` で親に起動した人を埋めても、メンションの通知は届きません。そのため、そのときだけ開始の返信でメンションします
 - ほかの返信ではメンションしません
+- メンションのあとで改行し、見出しを次の行に出します (1 行目が `@ユーザー`、2 行目が `:white_check_mark: Deployed v8: prd-amber-api` などの見出し)。同じ行に並べると、見出しが読みにくいためです。親の投稿、開始の返信、親の書き換えのどれでも同じ形です
 - 親を書き換える (`chat.update`) ときは、親に起動した人が入っていれば、本文の先頭のメンションを付け直します。`chat.update` は本文をまるごと置き換えるため、付け直さないとメンションが消えます。あとから見て、誰のデプロイか分かるようにするためです
   - 進行中が先に届いたときは、開始のあとの書き換えで、親にもメンションが付きます
   - 書き換えで付け直したメンションで、通知がもう一度届かないことは、Slack の開発者向けのドキュメント (`chat.update`、メンションの書き方) には書かれていません
@@ -234,3 +235,4 @@ aws sqs receive-message \
 - [chat.update (Slack 公式)](https://docs.slack.dev/reference/methods/chat.update)
 - [reactions.add (Slack 公式)](https://docs.slack.dev/reference/methods/reactions.add)
 - [Formatting text for app surfaces: mentioning users (Slack 公式)](https://docs.slack.dev/messaging/formatting-message-text#mentioning-users)
+- [Formatting text for app surfaces: line breaks (Slack 公式)](https://docs.slack.dev/messaging/formatting-message-text#line-breaks)

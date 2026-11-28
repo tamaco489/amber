@@ -13,9 +13,9 @@ func TestWithMention(t *testing.T) {
 		userID string
 		want   string
 	}{
-		"本文の先頭でメンションする": {
+		"本文の先頭でメンションし、改行して本文を次の行に出す": {
 			userID: "U0123ABCD",
-			want:   "<@U0123ABCD> *:rocket: Deploying v3: prd-amber-api*",
+			want:   "<@U0123ABCD>\n*:rocket: Deploying v3: prd-amber-api*",
 		},
 		"ユーザー ID が空なら、本文を変えない": {
 			want: "*:rocket: Deploying v3: prd-amber-api*",
