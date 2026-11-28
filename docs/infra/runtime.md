@@ -64,6 +64,18 @@ The ECS service starts with the image tagged `bootstrap` in ECR (Terraform looks
 
 The ECR lifecycle policy never expires the `bootstrap` image (it only expires `v*` tags). If it were gone, the plan with `enable_runtime = true` would fail. Push it again with `just backend::push bootstrap`.
 
+### When the name does not resolve right after starting
+
+The `ecs-lab.tamaco-blog.jp` record does not exist while the environment is stopped. **If you look up the name before the apply finishes, your machine caches the answer "no such name" (NXDOMAIN).** It keeps returning `Could not resolve host` for a while, even after the apply has created the record.
+
+- How long the negative answer is cached depends on the SOA of `tamaco-blog.jp`. Its TTL is 900 seconds and its minimum is 86400 seconds, so the shorter one applies: about 15 minutes
+- Look up the name only after the apply has finished
+- If it does not resolve, flush the local DNS cache (macOS)
+
+```sh
+sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder
+```
+
 ## Adding new resources
 
 Put resources billed by the hour, or billed just for existing, in a module that `enable_runtime` destroys.
@@ -78,3 +90,4 @@ Put resources billed by the hour, or billed just for existing, in a module that 
 - [AWS Fargate pricing](https://aws.amazon.com/fargate/pricing/)
 - [Amazon VPC pricing (public IPv4 addresses)](https://aws.amazon.com/vpc/pricing/)
 - [Amazon CloudWatch pricing](https://aws.amazon.com/cloudwatch/pricing/)
+- [RFC 2308: Negative caching of DNS queries](https://www.rfc-editor.org/rfc/rfc2308)
