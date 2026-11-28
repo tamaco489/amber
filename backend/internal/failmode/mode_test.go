@@ -15,6 +15,14 @@ func TestFromVersion(t *testing.T) {
 			version: "v9-fail-health",
 			want:    Health,
 		},
+		"-fail-500 で終われば Fail500": {
+			version: "v10-fail-500",
+			want:    Fail500,
+		},
+		"末尾でなく途中に -fail-500 があれば Normal": {
+			version: "v10-fail-500-2",
+			want:    Normal,
+		},
 		"ふつうの版は Normal": {
 			version: "v9",
 			want:    Normal,

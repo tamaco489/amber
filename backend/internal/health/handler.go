@@ -2,8 +2,11 @@ package health
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/tamaco489/amber/backend/internal/failmode"
 )
 
 // maxSleep は、/ の sleep で待たせられる上限
@@ -19,8 +22,17 @@ func Check(w http.ResponseWriter, _ *http.Request) {
 // FailingCheck は、ALB のヘルスチェックに 500 を返し続ける
 //   - 版の名前が -fail-health で終わるときに、Check の代わりに使う (internal/failmode)
 //   - プロセスは動くがヘルスチェックに通らない版を作り、デプロイのサーキットブレーカーが元の版に戻すかを確かめるため
-func FailingCheck(w http.ResponseWriter, _ *http.Request) {
-	http.Error(w, "fail-health: this version fails the health check on purpose", http.StatusInternalServerError)
+//   - アプリの不具合ではなく、わざと返したと分かるように、返すたびにアクセスログとは別に ERROR のログを 1 行出す
+func FailingCheck(version string, logger *slog.Logger) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		logger.Error("failing the health check on purpose",
+			"mode", failmode.Health,
+			"method", r.Method,
+			"path", r.URL.Path,
+			"version", version,
+		)
+		http.Error(w, "fail-health: this version fails the health check on purpose", http.StatusInternalServerError)
+	}
 }
 
 // Version は、バージョン番号を返す
