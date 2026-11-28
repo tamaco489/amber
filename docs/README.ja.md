@@ -36,7 +36,7 @@ ECS は、CodeDeploy を使わずにブルー/グリーン (2025 年 7 月)、�
 ## 利用ツール
 
 手元で使うツールです。Go、golangci-lint、Terraform、tflint、trivy のバージョンは `.tool-versions` (asdf) で固定し、手元と CI の両方がここを読みます。
-actionlint と shellcheck は `ci-actions.yaml` で、k6 は `loadtest/justfile` のコンテナのイメージで固定しています。それ以外は固定しておらず、動作を確かめたバージョンを書いています。
+actionlint と shellcheck は `ci-actions.yaml` で、k6 は `loadtest/justfile` のコンテナのイメージで、CI の just は `ci-loadtest.yaml` で固定しています。それ以外は固定しておらず、動作を確かめたバージョンを書いています。
 
 | ツール        | バージョン | 用途                                                           |
 | ------------- | ---------- | -------------------------------------------------------------- |
@@ -55,13 +55,14 @@ actionlint と shellcheck は `ci-actions.yaml` で、k6 は `loadtest/justfile`
 
 ## ドキュメント
 
-| ドキュメント                                                | 内容                                                                                     |
-| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| [検証環境の停止と再開](./infra/runtime.ja.md)               | `enable_runtime` による時間課金リソースの作成と削除、常に残るリソース                    |
-| [tfstate のバケットのライフサイクル](./infra/tfstate.ja.md) | tfstate のバケットの古い版を 10 個まで残すライフサイクルと、入れる・確かめる手順         |
-| [デプロイの Slack への通知](./infra/notification.ja.md)     | デプロイの開始・進行中・完了・失敗を Slack に送る仕組みと、ボットトークンを入れる手順    |
-| [タスク定義の変更の反映](./cd/task-definition.ja.md)        | Terraform で変えたタスク定義を、`cd-backend` でサービスに届ける手順                      |
-| [通知の Lambda のデプロイ](./cd/notifier.ja.md)             | 通知の Lambda のコードを、`main` への push で `cd-notifier` が置く仕組みと、流し直す手順 |
-| [ワークフローとスクリプトの検査](./ci/workflow-lint.ja.md)  | `ci-actions` が actionlint と shellcheck で検査する内容と、手元での流し方                |
-| [デプロイ中の負荷試験 (k6)](./loadtest/k6.ja.md)            | デプロイ中に k6 で負荷をかけ、失敗の種類とバージョンごとの件数を数える手順               |
-| [v\* のタグのルールセット](./github/tag-ruleset.ja.md)      | デプロイの起点の `v*` のタグを、作成・更新・削除できる人を管理者に絞る                   |
+| ドキュメント                                                | 内容                                                                                                  |
+| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| [検証環境の停止と再開](./infra/runtime.ja.md)               | `enable_runtime` による時間課金リソースの作成と削除、常に残るリソース                                 |
+| [tfstate のバケットのライフサイクル](./infra/tfstate.ja.md) | tfstate のバケットの古い版を 10 個まで残すライフサイクルと、入れる・確かめる手順                      |
+| [デプロイの Slack への通知](./infra/notification.ja.md)     | デプロイの開始・進行中・完了・失敗を Slack に送る仕組みと、ボットトークンを入れる手順                 |
+| [タスク定義の変更の反映](./cd/task-definition.ja.md)        | Terraform で変えたタスク定義を、`cd-backend` でサービスに届ける手順                                   |
+| [通知の Lambda のデプロイ](./cd/notifier.ja.md)             | 通知の Lambda のコードを、`main` への push で `cd-notifier` が置く仕組みと、流し直す手順              |
+| [ワークフローとスクリプトの検査](./ci/workflow-lint.ja.md)  | `ci-actions` が actionlint と shellcheck で検査する内容と、手元での流し方                             |
+| [k6 のスクリプトの検査](./ci/loadtest.ja.md)                | `ci-loadtest` が `k6 inspect` と、runner の中のアプリへの短い負荷試験で検査する内容と、手元での流し方 |
+| [デプロイ中の負荷試験 (k6)](./loadtest/k6.ja.md)            | デプロイ中に k6 で負荷をかけ、失敗の種類とバージョンごとの件数を数える手順                            |
+| [v\* のタグのルールセット](./github/tag-ruleset.ja.md)      | デプロイの起点の `v*` のタグを、作成・更新・削除できる人を管理者に絞る                                |

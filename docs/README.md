@@ -36,7 +36,7 @@ The findings are kept as material for choosing settings.
 ## Tools
 
 Tools used on local machines. Go, golangci-lint, Terraform, tflint and trivy are pinned in `.tool-versions` (asdf), which both local machines and CI read.
-actionlint and shellcheck are pinned in `ci-actions.yaml`, and k6 by the container image in `loadtest/justfile`. The others are not pinned; the versions shown are the ones confirmed to work.
+actionlint and shellcheck are pinned in `ci-actions.yaml`, k6 by the container image in `loadtest/justfile`, and just in CI by `ci-loadtest.yaml`. The others are not pinned; the versions shown are the ones confirmed to work.
 
 | Tool          | Version | Used for                                                       |
 | ------------- | ------- | -------------------------------------------------------------- |
@@ -55,13 +55,14 @@ actionlint and shellcheck are pinned in `ci-actions.yaml`, and k6 by the contain
 
 ## Documents
 
-| Document                                                      | What it covers                                                                                                     |
-| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| [Stopping and restarting the environment](./infra/runtime.md) | Creating and destroying the billed resources with `enable_runtime`, and what always stays                          |
-| [Lifecycle of the tfstate bucket](./infra/tfstate.md)         | The lifecycle rule that keeps up to 10 old versions in the tfstate bucket, and how to put it in place and check it |
-| [Deployment notifications to Slack](./infra/notification.md)  | How deployment start, progress, completion and failure are posted to Slack, and how to set the bot token           |
-| [Applying task definition changes](./cd/task-definition.md)   | Getting task definition changes made in Terraform onto the service with `cd-backend`                               |
-| [Deploying the notification Lambda](./cd/notifier.md)         | How `cd-notifier` puts the code of the notification Lambda on a push to `main`, and how to redeploy it             |
-| [Checking workflows and scripts](./ci/workflow-lint.md)       | What `ci-actions` checks with actionlint and shellcheck, and how to run it locally                                 |
-| [Load testing during deployments (k6)](./loadtest/k6.md)      | Running k6 during a deployment and counting failures per kind and responses per version                            |
-| [Ruleset for v\* tags](./github/tag-ruleset.md)               | Limiting who can create, update and delete `v*` tags (the deployment trigger) to admins                            |
+| Document                                                      | What it covers                                                                                                                         |
+| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| [Stopping and restarting the environment](./infra/runtime.md) | Creating and destroying the billed resources with `enable_runtime`, and what always stays                                              |
+| [Lifecycle of the tfstate bucket](./infra/tfstate.md)         | The lifecycle rule that keeps up to 10 old versions in the tfstate bucket, and how to put it in place and check it                     |
+| [Deployment notifications to Slack](./infra/notification.md)  | How deployment start, progress, completion and failure are posted to Slack, and how to set the bot token                               |
+| [Applying task definition changes](./cd/task-definition.md)   | Getting task definition changes made in Terraform onto the service with `cd-backend`                                                   |
+| [Deploying the notification Lambda](./cd/notifier.md)         | How `cd-notifier` puts the code of the notification Lambda on a push to `main`, and how to redeploy it                                 |
+| [Checking workflows and scripts](./ci/workflow-lint.md)       | What `ci-actions` checks with actionlint and shellcheck, and how to run it locally                                                     |
+| [Checking the k6 scripts](./ci/loadtest.md)                   | What `ci-loadtest` checks with `k6 inspect` and a short load test against the application inside the runner, and how to run it locally |
+| [Load testing during deployments (k6)](./loadtest/k6.md)      | Running k6 during a deployment and counting failures per kind and responses per version                                                |
+| [Ruleset for v\* tags](./github/tag-ruleset.md)               | Limiting who can create, update and delete `v*` tags (the deployment trigger) to admins                                                |
