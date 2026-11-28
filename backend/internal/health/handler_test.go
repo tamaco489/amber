@@ -1,6 +1,9 @@
 package health
 
 import (
+	"bytes"
+	"encoding/json"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -20,14 +23,35 @@ func TestCheck(t *testing.T) {
 }
 
 func TestFailingCheck(t *testing.T) {
+	var logs bytes.Buffer
+	logger := slog.New(slog.NewJSONHandler(&logs, nil))
+
 	rec := httptest.NewRecorder()
-	FailingCheck(rec, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/health", nil))
+	FailingCheck("v9-fail-health", logger).ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/health", nil))
 
 	if rec.Code != http.StatusInternalServerError {
 		t.Errorf("status = %d, want %d", rec.Code, http.StatusInternalServerError)
 	}
 	if want := "fail-health: this version fails the health check on purpose\n"; rec.Body.String() != want {
 		t.Errorf("body = %q, want %q", rec.Body.String(), want)
+	}
+
+	var got map[string]any
+	if err := json.Unmarshal(logs.Bytes(), &got); err != nil {
+		t.Fatalf("log is not one JSON line: %v (%q)", err, logs.String())
+	}
+	want := map[string]string{
+		"level":   "ERROR",
+		"msg":     "failing the health check on purpose",
+		"mode":    "fail-health",
+		"method":  http.MethodGet,
+		"path":    "/health",
+		"version": "v9-fail-health",
+	}
+	for key, value := range want {
+		if got[key] != value {
+			t.Errorf("log %s = %v, want %q", key, got[key], value)
+		}
 	}
 }
 

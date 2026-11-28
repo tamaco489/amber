@@ -2,7 +2,7 @@
 //   - /health、/: どの版が動いているかを確かめる (internal/health)
 //   - /v1/carts/{cart_id}/checkout: 注文を確定する (internal/checkout)
 //   - ルーティングとアクセスログは internal/server。ここでは起動と終了、ハンドラーの組み立て (handlers.go) だけを持つ
-//   - 版の名前が -fail-exit / -fail-health で終わるときは、わざと失敗する (internal/failmode)
+//   - 版の名前が -fail-exit / -fail-health / -fail-500 で終わるときは、わざと失敗する (internal/failmode)
 package main
 
 import (
@@ -52,7 +52,7 @@ func run(mode failmode.Mode) error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer stop()
 
-	mux := server.NewMux(newHandlers(version, mode))
+	mux := server.NewMux(newHandlers(version, mode, slog.Default()))
 	srv := &http.Server{
 		Addr:              addr,
 		Handler:           server.WithAccessLog(mux, version),
