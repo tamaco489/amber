@@ -46,7 +46,7 @@ For each deployment ID (`ecs-svc/...`), one parent post is created, and later no
 
 ## Mentioning the person who started the deployment
 
-The person who started the deployment (the GitHub user in `Triggered by`) is mentioned in Slack. The mention happens only once per deployment.
+The person who started the deployment (the GitHub user in `Triggered by`) is mentioned in Slack. Only one new post per deployment is sent with the mention.
 
 | Arrival order                       | Post with the mention                                             |
 | ----------------------------------- | ----------------------------------------------------------------- |
@@ -55,7 +55,10 @@ The person who started the deployment (the GitHub user in `Triggered by`) is men
 
 - A Slack mention must use the Slack user ID (`<@U...>`). A GitHub username does not notify anyone. So a map from GitHub usernames to Slack user IDs is kept in the SSM parameter `/prd-amber/notification/slack-user-ids` (see "Add a person to the map" below)
 - When the in-progress event arrives first, the actor is unknown when the parent is created. Filling in the actor later with `chat.update` does not send a mention notification. So only in that case, the started reply carries the mention
-- Rewriting the parent (`chat.update`) and the other replies do not mention anyone. Rewriting the parent removes the mention at the start of its text (the notification was already sent when the parent was posted)
+- The other replies do not mention anyone
+- When the parent is rewritten (`chat.update`), the mention at the start of its text is added again if the parent has the actor. `chat.update` replaces the whole message, so without this the mention would disappear. This keeps it clear later whose deployment it was
+  - When the in-progress event arrives first, the parent also gets the mention when it is rewritten after the started event
+  - Slack's developer docs (`chat.update`, mention formatting) do not say whether a mention added again by a rewrite sends another notification
 - A person not in the map, and a deployment with no known actor (`Triggered by` is `none`), get no mention; the notifications are sent as before
 - When the map cannot be read (the parameter is missing, it is not JSON, or a value is not a Slack user ID), notifications are also sent without mentions. The function logs `notify without mentions`
 
