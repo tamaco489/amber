@@ -23,7 +23,7 @@ It runs on PRs that change any of the following.
 
 - `loadtest/**`
 - The application and the image inputs: `backend/cmd/api/**`, `backend/Dockerfile`, `backend/.dockerignore`, `backend/go.mod`
-- The `internal` packages the application imports: `backend/internal/server/**`, `backend/internal/health/**`, `backend/internal/checkout/**`. Other `internal` packages are used only by the notification Lambda, so they are left out
+- The `internal` packages the application imports: `backend/internal/server/**`, `backend/internal/health/**`, `backend/internal/checkout/**`, `backend/internal/failmode/**`. Other `internal` packages are used only by the notification Lambda, so they are left out
 - The build and start recipes: `backend/justfile`, `justfile`
 - `.github/workflows/ci-loadtest.yaml`
 
