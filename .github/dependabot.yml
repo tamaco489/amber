@@ -1,0 +1,49 @@
+# ワークフローの action と、コンテナのイメージを上げる PR を、Dependabot に出させる
+#   - action は commit の SHA、イメージはタグとダイジェストで固定している。Dependabot は SHA と版のコメント、
+#     タグとダイジェストを一緒に書き換える
+#   - 週に 1 回 (月曜の朝) だけ見る
+#   - cooldown で、公開から 7 日たっていない版は取り込まない。乗っ取られた版が公開されても、
+#     見つかって取り下げられるまでの間に入れないため (セキュリティの更新には効かない)
+#   - labels は .claude/rules/github/labels.md にあるものを使う。指定すると、既定の dependencies のラベルは付かない
+# DOC: https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference
+version: 2
+updates:
+  # .github/workflows/ の uses: (CI と CD の両方のワークフローがある)
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Tokyo
+    cooldown:
+      default-days: 7
+    labels:
+      - ci
+      - cd
+
+  # backend/Dockerfile の FROM (golang、distroless)
+  - package-ecosystem: docker
+    directory: /backend
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Tokyo
+    cooldown:
+      default-days: 7
+    labels:
+      - backend
+
+  # loadtest/Dockerfile の FROM (k6。loadtest/justfile がこの行からイメージを読む)
+  - package-ecosystem: docker
+    directory: /loadtest
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Tokyo
+    cooldown:
+      default-days: 7
+    labels:
+      - loadtest
