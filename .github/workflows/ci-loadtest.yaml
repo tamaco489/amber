@@ -10,6 +10,7 @@ on:
       - "backend/internal/server/**"
       - "backend/internal/health/**"
       - "backend/internal/checkout/**"
+      - "backend/internal/failmode/**"
       - "backend/Dockerfile"
       - "backend/.dockerignore"
       - "backend/go.mod"
