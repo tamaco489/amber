@@ -78,33 +78,62 @@ description: amber の AWS のリソースのうち、置いておくだけで�
    - `verify.sh` が `AUTH_ERROR` で止まったら、検証を止めてユーザーに報告する
 
 2. **表と付録が一致するか。** 表の「実際」と「時刻」が、付録の出力 (見出しの `[時刻]`) から写したものになっている。付録に根拠がない行は、根拠がないとみなす
-3. **CLI と MCP が一致するか。** 時間課金の行とアラームは、両方で確かめている。アカウントも一致している。片方だけで判定した行があれば、差し戻す
+3. **CLI と MCP が一致するか。** 時間課金の行とアラームと tfstate のバケットは、両方で確かめている。アカウントも一致している。片方だけで判定した行があれば、差し戻す
 4. **結論と矛盾しないか。** NG や未確認の行があるのに「残っていない」としていない。state が `LOCKED` なら、結論は未確認になっている
 5. **作業ツリーが変わっていないか。** `git status --porcelain` が、手順 1 と同じ (エージェントがレポート以外を書いていない)
 
 ## 判断の表
 
-| 区分                           | リソース                                                                        | OK の条件                                                                                                                                                                    |
-| ------------------------------ | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 前提                           | アカウント、state のロック、`terraform plan`                                    | amber のアカウント。`NOT_LOCKED`。`No changes`                                                                                                                               |
-| 時間課金 (残っていたら NG)     | ECS のクラスター・サービス・タスク                                              | ACTIVE なクラスターがない (`INACTIVE`、または一覧にない)                                                                                                                     |
-|                                | ALB、ターゲットグループ                                                         | `prd-amber` を含むものがない                                                                                                                                                 |
-|                                | インターフェース型の VPC エンドポイント                                         | amber の VPC にない (Gateway の S3 だけ)                                                                                                                                     |
-|                                | NAT、EC2、ENI (amber の VPC)、EIP、EBS (タグ `project=amber`)                   | ない                                                                                                                                                                         |
-|                                | オートスケーリングの対象                                                        | `prd-amber` を含むものがない                                                                                                                                                 |
-| 置いておくと課金 (残ったら NG) | CloudWatch アラーム (月 \$0.10/個)                                              | `prd-amber` を含むものがない (`TargetTracking-service/prd-amber/...` も含む)                                                                                                 |
-|                                | ロググループ                                                                    | `prd-amber` を含むものがない (通知の Lambda の `/aws/lambda/prd-amber-notification` は除く)                                                                                  |
-|                                | Route 53 のレコード、ACM の証明書                                               | `ecs-lab` を含むものがない                                                                                                                                                   |
-| ほぼ \$0 (残ってよい)          | ECR `prd-amber-api`                                                             | 合計 100 MB 未満                                                                                                                                                             |
-|                                | tfstate のバケット `prd-amber-tfstate`                                          | key ごとの古い版が 10 個以下。超えていたら NG (ライフサイクルの反映の途中でも NG)。料金はほぼ \$0 のため止める操作は要らず、料金の目安と、ライフサイクルが入っているかを書く |
-|                                | 通知の Lambda のロググループ `/aws/lambda/prd-amber-notification`               | 保存期間が 3 日。`enable_runtime` で消さずに常に置く (apply の前で、まだないのもよい)                                                                                        |
-| 無料 (残ってよい)              | VPC、サブネット、IGW、ルートテーブル、セキュリティグループ、S3 のエンドポイント | -                                                                                                                                                                            |
-|                                | IAM ロール、タスク定義、プレフィックスリスト                                    | -                                                                                                                                                                            |
-|                                | 通知 (EventBridge のルール、SQS)                                                | DLQ が 0 件。EventBridge の接続と API 送信先がない (Lambda に切り替えたときに消した)                                                                                         |
-|                                | Secrets Manager の `prd-amber` を含むシークレット                               | ない (接続と一緒に `events!connection/prd-amber-slack/...` が消えている。残っていたら NG)                                                                                    |
-|                                | DynamoDB の通知の状態のテーブル `prd-amber-notification`                        | このテーブル 1 つだけで、`PAY_PER_REQUEST` (オンデマンド)                                                                                                                    |
-|                                | SSM のパラメータ `/prd-amber/notification/slack-{bot-token,user-ids}`           | この 2 つだけで、どちらも `Standard` (標準)                                                                                                                                  |
-|                                | 通知の Lambda の関数 `prd-amber-notification`                                   | この関数 1 つだけで、`provided.al2023`、`arm64` (リクエストと実行時間の課金のため、置いておくだけなら \$0。apply の前で、まだないのもよい)                                   |
+| 区分                           | リソース                                                                        | OK の条件                                                                                                                                                                |
+| ------------------------------ | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 前提                           | アカウント、state のロック、`terraform plan`                                    | amber のアカウント。`NOT_LOCKED`。`No changes`                                                                                                                           |
+| 時間課金 (残っていたら NG)     | ECS のクラスター・サービス・タスク                                              | ACTIVE なクラスターがない (`INACTIVE`、または一覧にない)                                                                                                                 |
+|                                | ALB、ターゲットグループ                                                         | `prd-amber` を含むものがない                                                                                                                                             |
+|                                | インターフェース型の VPC エンドポイント                                         | amber の VPC にない (Gateway の S3 だけ)                                                                                                                                 |
+|                                | NAT、EC2、ENI (amber の VPC)、EIP、EBS (タグ `project=amber`)                   | ない                                                                                                                                                                     |
+|                                | オートスケーリングの対象                                                        | `prd-amber` を含むものがない                                                                                                                                             |
+| 置いておくと課金 (残ったら NG) | CloudWatch アラーム (月 \$0.10/個)                                              | `prd-amber` を含むものがない (`TargetTracking-service/prd-amber/...` も含む)                                                                                             |
+|                                | ロググループ                                                                    | `prd-amber` を含むものがない (通知の Lambda の `/aws/lambda/prd-amber-notification` は除く)                                                                              |
+|                                | Route 53 のレコード、ACM の証明書                                               | `ecs-lab` を含むものがない                                                                                                                                               |
+| ほぼ \$0 (残ってよい)          | ECR `prd-amber-api`                                                             | 合計 100 MB 未満                                                                                                                                                         |
+|                                | tfstate のバケット `prd-amber-tfstate`                                          | 消える条件を満たして 3 日を過ぎた古い版がない (`OK` か `OK_PENDING`。下の「tfstate の古い版の判定」)。止める操作は要らず、料金の目安とライフサイクルが入っているかを書く |
+|                                | 通知の Lambda のロググループ `/aws/lambda/prd-amber-notification`               | 保存期間が 3 日。`enable_runtime` で消さずに常に置く (apply の前で、まだないのもよい)                                                                                    |
+| 無料 (残ってよい)              | VPC、サブネット、IGW、ルートテーブル、セキュリティグループ、S3 のエンドポイント | -                                                                                                                                                                        |
+|                                | IAM ロール、タスク定義、プレフィックスリスト                                    | -                                                                                                                                                                        |
+|                                | 通知 (EventBridge のルール、SQS)                                                | DLQ が 0 件。EventBridge の接続と API 送信先がない (Lambda に切り替えたときに消した)                                                                                     |
+|                                | Secrets Manager の `prd-amber` を含むシークレット                               | ない (接続と一緒に `events!connection/prd-amber-slack/...` が消えている。残っていたら NG)                                                                                |
+|                                | DynamoDB の通知の状態のテーブル `prd-amber-notification`                        | このテーブル 1 つだけで、`PAY_PER_REQUEST` (オンデマンド)                                                                                                                |
+|                                | SSM のパラメータ `/prd-amber/notification/slack-{bot-token,user-ids}`           | この 2 つだけで、どちらも `Standard` (標準)                                                                                                                              |
+|                                | 通知の Lambda の関数 `prd-amber-notification`                                   | この関数 1 つだけで、`provided.al2023`、`arm64` (リクエストと実行時間の課金のため、置いておくだけなら \$0。apply の前で、まだないのもよい)                               |
 
 - AWS Config は、アカウント全体で設定の変化を記録している。`enable_runtime` を切り替えるたびに、記録 1 件ごとの小さな料金がかかる (置いておくだけではかからない)
 - 構成を変えて、置いておくだけで料金がかかるリソースを足したら、この表と `scripts/cli/checks/` の該当するスクリプトと `scripts/mcp/check.py` と `report-template.md` を一緒に直す。新しい区分なら `scripts/cli/checks/` にファイルを足し、`scripts/cli/check.sh` の一覧に加える
+
+### tfstate の古い版の判定
+
+ライフサイクル (`infra/tfstate/lifecycle.json`) は、`NoncurrentDays: 1` と `NewerNoncurrentVersions: 10` の**両方**を満たした古い版だけを消す。古い版の数だけで判定すると、apply を何回も流した日の直後に、毎回 NG になる。そこで、消えるはずの時刻を過ぎても残っている版があるかで判定する (`scripts/cli/checks/storage.sh` と `scripts/mcp/check.py` で同じ値を出す)。
+
+| 出力の値             | 意味                                                                                                            |
+| -------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `noncurrent`         | 古い版の数 (削除マーカーを含む)                                                                                 |
+| `excess`             | 新しい 10 個より古い版の数 (ライフサイクルが消す対象)                                                           |
+| `excessVersions`     | `excess` の版ごとの時刻 (下の 3 つ) を、新しい順に並べたもの                                                    |
+| `noncurrentSinceJst` | 古い版になった時刻 (1 つ新しい版の `LastModified`)                                                              |
+| `eligibleAtJst`      | 消える条件を両方満たした時刻。次の 2 つの遅いほう                                                               |
+|                      | - 日数: `noncurrentSinceJst` に 1 日を足し、次の UTC 0 時 (JST 9 時) に切り上げた時刻                           |
+|                      | - 数: それより新しい古い版が 10 個そろった時刻 (新しいほうから 10 番目の古い版が、古い版になった時刻)           |
+| `deadlineJst`        | `eligibleAtJst` から 3 日あと                                                                                   |
+| `overdue`            | `deadlineJst` を過ぎても残っている版の数                                                                        |
+| `verdict`            | `OK` (`excess` が 0) / `OK_PENDING` (`excess` はあるが、どれも `deadlineJst` の前) / `NG` (`overdue` が 1 以上) |
+
+- 待つ日数を 3 日にした理由
+  - ライフサイクルは 1 日に 1 回動く。条件を満たしてから、次に動くまで最大で約 1 日かかる
+  - 動いたあとの削除は非同期で、完了の時刻は保証されない。小さなバケットでも、遅れを 2 日ぶん見込む
+  - 待ちすぎても困らない。tfstate の版の料金は月約 \$0.0002 で、消えるのが数日遅れても料金は変わらない。短くすると、遅れただけで NG になり、調べ直しが増える
+- 削除マーカーも古い版の 1 つとして数える。S3 の原文では、削除マーカーが `NewerNoncurrentVersions` の数に入るかを確かめられていない。`OK_PENDING` のまま `deadlineJst` を過ぎて NG になったら、削除マーカーの扱いが想定と違う可能性も調べる
+- 出力には今の時刻を含めない。時刻で変わるのは `overdue` と `verdict` だけで、`deadlineJst` を過ぎたときに変わる
+
+#### 参考 (tfstate の古い版の判定)
+
+- DOC: <https://docs.aws.amazon.com/AmazonS3/latest/userguide/intro-lifecycle-rules.html>
+- DOC: <https://repost.aws/knowledge-center/s3-lifecycle-rule-delay>
