@@ -56,6 +56,7 @@ The person who started the deployment (the GitHub user in `Triggered by`) is men
 - A Slack mention must use the Slack user ID (`<@U...>`). A GitHub username does not notify anyone. So a map from GitHub usernames to Slack user IDs is kept in the SSM parameter `/prd-amber/notification/slack-user-ids` (see "Add a person to the map" below)
 - When the in-progress event arrives first, the actor is unknown when the parent is created. Filling in the actor later with `chat.update` does not send a mention notification. So only in that case, the started reply carries the mention
 - The other replies do not mention anyone
+- The mention is followed by a line break, so the heading is on the next line (line 1 is `@user`, line 2 is a heading such as `:white_check_mark: Deployed v8: prd-amber-api`). On one line the heading is hard to read. The parent post, the started reply and the parent rewrite all use this layout
 - When the parent is rewritten (`chat.update`), the mention at the start of its text is added again if the parent has the actor. `chat.update` replaces the whole message, so without this the mention would disappear. This keeps it clear later whose deployment it was
   - When the in-progress event arrives first, the parent also gets the mention when it is rewritten after the started event
   - Slack's developer docs (`chat.update`, mention formatting) do not say whether a mention added again by a rewrite sends another notification
@@ -234,3 +235,4 @@ aws sqs receive-message \
 - [chat.update (Slack)](https://docs.slack.dev/reference/methods/chat.update)
 - [reactions.add (Slack)](https://docs.slack.dev/reference/methods/reactions.add)
 - [Formatting text for app surfaces: mentioning users (Slack)](https://docs.slack.dev/messaging/formatting-message-text#mentioning-users)
+- [Formatting text for app surfaces: line breaks (Slack)](https://docs.slack.dev/messaging/formatting-message-text#line-breaks)
