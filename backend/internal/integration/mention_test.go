@@ -22,10 +22,38 @@ func TestNotifyMention(t *testing.T) {
 		wantReplies []string                 // 返信の text (届いた順)
 		wantUpdates []string                 // 親の書き換え (chat.update) の text (届いた順)
 	}{
-		"開始が先に届くと、親の投稿の先頭でメンションする": {
+		"開始が先に届くと、親の投稿の先頭でメンションし、書き換えでも付け直す": {
 			userIDs:    `{"tamaco489": "U0TEST"}`,
 			events:     []events.CloudWatchEvent{evStarted, evInProgress, evCompleted},
 			wantParent: "<@U0TEST> *:rocket: Deploying v3: prd-amber-api*",
+			wantReplies: []string{
+				"*:rocket: Deploy started: v3*",
+				"*:hourglass_flowing_sand: Deployment in progress: prd-amber-api*",
+				"*:white_check_mark: Deployment completed: prd-amber-api*",
+			},
+			wantUpdates: []string{
+				"<@U0TEST> *:rocket: Deploying v3: prd-amber-api*",
+				"<@U0TEST> *:white_check_mark: Deployed v3: prd-amber-api*",
+			},
+		},
+		"進行中が先に届くと、開始の返信の先頭でメンションし、そのあとの書き換えで親にも付ける": {
+			userIDs:    `{"tamaco489": "U0TEST"}`,
+			events:     []events.CloudWatchEvent{evInProgress, evStarted, evCompleted},
+			wantParent: "*:rocket: Deploying: prd-amber-api*",
+			wantReplies: []string{
+				"*:hourglass_flowing_sand: Deployment in progress: prd-amber-api*",
+				"<@U0TEST> *:rocket: Deploy started: v3*",
+				"*:white_check_mark: Deployment completed: prd-amber-api*",
+			},
+			wantUpdates: []string{
+				"<@U0TEST> *:rocket: Deploying v3: prd-amber-api*",
+				"<@U0TEST> *:white_check_mark: Deployed v3: prd-amber-api*",
+			},
+		},
+		"対応表に無い人には、親の投稿でも書き換えでもメンションしない": {
+			userIDs:    `{}`,
+			events:     []events.CloudWatchEvent{evStarted, evInProgress, evCompleted},
+			wantParent: "*:rocket: Deploying v3: prd-amber-api*",
 			wantReplies: []string{
 				"*:rocket: Deploy started: v3*",
 				"*:hourglass_flowing_sand: Deployment in progress: prd-amber-api*",
@@ -36,21 +64,15 @@ func TestNotifyMention(t *testing.T) {
 				"*:white_check_mark: Deployed v3: prd-amber-api*",
 			},
 		},
-		"進行中が先に届くと、開始の返信の先頭でメンションする": {
+		"起動した人が分からないデプロイでは、親の投稿でも書き換えでもメンションしない": {
 			userIDs:    `{"tamaco489": "U0TEST"}`,
-			events:     []events.CloudWatchEvent{evInProgress, evStarted},
+			events:     []events.CloudWatchEvent{evInProgress, evCompleted},
 			wantParent: "*:rocket: Deploying: prd-amber-api*",
 			wantReplies: []string{
 				"*:hourglass_flowing_sand: Deployment in progress: prd-amber-api*",
-				"<@U0TEST> *:rocket: Deploy started: v3*",
+				"*:white_check_mark: Deployment completed: prd-amber-api*",
 			},
-			wantUpdates: []string{"*:rocket: Deploying v3: prd-amber-api*"},
-		},
-		"対応表に無い人には、メンションしない": {
-			userIDs:     `{}`,
-			events:      []events.CloudWatchEvent{evStarted},
-			wantParent:  "*:rocket: Deploying v3: prd-amber-api*",
-			wantReplies: []string{"*:rocket: Deploy started: v3*"},
+			wantUpdates: []string{"*:white_check_mark: Deployed: prd-amber-api*"},
 		},
 	}
 
