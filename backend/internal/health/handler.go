@@ -1,4 +1,4 @@
-package main
+package health
 
 import (
 	"encoding/json"
@@ -6,26 +6,19 @@ import (
 	"time"
 )
 
-// / の sleep で待たせられる上限
-//   - shutdownTimeout より短くし、終了処理の確認で待ち切れるようにする
+// maxSleep は、/ の sleep で待たせられる上限
+//   - cmd/api の shutdownTimeout より短くし、終了処理の確認で待ち切れるようにする
 const maxSleep = 15 * time.Second
 
-func newMux(version string) *http.ServeMux {
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /health", handleHealth)
-	mux.HandleFunc("GET /{$}", handleVersion(version))
-	mux.HandleFunc("POST /v1/carts/{cart_id}/checkout", handleCheckout(version))
-	return mux
-}
-
-func handleHealth(w http.ResponseWriter, _ *http.Request) {
+// Check は、ALB のヘルスチェックに ok を返す
+func Check(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	_, _ = w.Write([]byte("ok\n"))
 }
 
-// バージョン番号を返す
+// Version は、バージョン番号を返す
 //   - ?sleep=5s のように指定すると、その時間だけ待ってから返す (SIGTERM を受けたときに、処理中のリクエストを終えてから止まるかを確かめるため)
-func handleVersion(version string) http.HandlerFunc {
+func Version(version string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if s := r.URL.Query().Get("sleep"); s != "" {
 			d, err := time.ParseDuration(s)

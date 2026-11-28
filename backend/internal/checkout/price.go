@@ -1,4 +1,4 @@
-package main
+package checkout
 
 // 商品ごとの単価 (円)
 //   - DB は使わず、値段はコードの中に持つ
@@ -11,7 +11,7 @@ var prices = map[string]int{
 
 // totalPrice は、品目ごとの単価 × 数量を足し合わせる
 //   - 品目は validate を通したもの (SKU が prices にあり、数量が入っている) を渡す
-func totalPrice(items []checkoutItem) int {
+func totalPrice(items []item) int {
 	total := 0
 	for _, it := range items {
 		total += prices[*it.SKU] * *it.Quantity

@@ -1,4 +1,4 @@
-package main
+package checkout
 
 import (
 	"fmt"
@@ -6,20 +6,6 @@ import (
 
 // 1 品目あたりの数量の上限
 const maxQuantity = 99
-
-// checkoutRequest は、注文の確定の本文
-//   - 項目があるかを見分けるため、ポインタで受ける (encoding/json には「必須」の仕組みがない)
-type checkoutRequest struct {
-	Items             []checkoutItem `json:"items"`               // 注文する品目
-	ShippingAddressID *string        `json:"shipping_address_id"` // 届け先の ID
-}
-
-// checkoutItem は、注文する品目 1 つ
-type checkoutItem struct {
-	SKU       *string `json:"sku"`        // 商品の ID (prices のキー)
-	Quantity  *int    `json:"quantity"`   // 数量
-	UnitPrice *int    `json:"unit_price"` // クライアントが送る単価。合計には使わない
-}
 
 // requiredField は、必須の項目 1 つ
 type requiredField[T any] struct {
@@ -29,9 +15,9 @@ type requiredField[T any] struct {
 
 // 本文の必須の項目
 //   - 並びの順に確かめ、最初に足りない項目をエラーにする
-var requiredRequestFields = []requiredField[checkoutRequest]{
-	{name: "items", present: func(r *checkoutRequest) bool { return len(r.Items) > 0 }},
-	{name: "shipping_address_id", present: func(r *checkoutRequest) bool {
+var requiredRequestFields = []requiredField[request]{
+	{name: "items", present: func(r *request) bool { return len(r.Items) > 0 }},
+	{name: "shipping_address_id", present: func(r *request) bool {
 		return r.ShippingAddressID != nil && *r.ShippingAddressID != ""
 	}},
 }
@@ -39,22 +25,22 @@ var requiredRequestFields = []requiredField[checkoutRequest]{
 // 品目ごとの必須の項目
 //   - 並びの順に確かめ、最初に足りない項目をエラーにする
 //   - 必須の項目を変えるときは、この一覧だけを直す
-var requiredItemFields = []requiredField[checkoutItem]{
-	{name: "sku", present: func(it *checkoutItem) bool { return it.SKU != nil }},
-	{name: "quantity", present: func(it *checkoutItem) bool { return it.Quantity != nil }},
-	{name: "unit_price", present: func(it *checkoutItem) bool { return it.UnitPrice != nil }},
+var requiredItemFields = []requiredField[item]{
+	{name: "sku", present: func(it *item) bool { return it.SKU != nil }},
+	{name: "quantity", present: func(it *item) bool { return it.Quantity != nil }},
+	{name: "unit_price", present: func(it *item) bool { return it.UnitPrice != nil }},
 }
 
 // validate は、必須の項目がそろっているかと、値が使えるかを確かめる
 //   - 必須の項目をすべて確かめてから、値を確かめる (足りない項目のエラーを先に返すため)
-func (r *checkoutRequest) validate() error {
+func (r *request) validate() error {
 	if err := r.validateRequired(); err != nil {
 		return err
 	}
 	return r.validateValues()
 }
 
-func (r *checkoutRequest) validateRequired() error {
+func (r *request) validateRequired() error {
 	for _, f := range requiredRequestFields {
 		if !f.present(r) {
 			return fmt.Errorf("%s is required", f.name)
@@ -70,7 +56,7 @@ func (r *checkoutRequest) validateRequired() error {
 	return nil
 }
 
-func (r *checkoutRequest) validateValues() error {
+func (r *request) validateValues() error {
 	for i, it := range r.Items {
 		if _, ok := prices[*it.SKU]; !ok {
 			return fmt.Errorf("items[%d].sku is unknown: %q", i, *it.SKU)

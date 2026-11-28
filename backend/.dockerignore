@@ -2,3 +2,8 @@
 *
 !go.mod
 !cmd/
+
+# アプリが読み込む internal のパッケージ (Dockerfile の COPY とそろえる)
+!internal/server/
+!internal/health/
+!internal/checkout/

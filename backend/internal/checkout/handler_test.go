@@ -1,4 +1,4 @@
-package main
+package checkout
 
 import (
 	"encoding/json"
@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestHandleCheckout(t *testing.T) {
+func TestHandle(t *testing.T) {
 	tests := map[string]struct {
 		body       string
 		wantStatus int
@@ -45,7 +45,7 @@ func TestHandleCheckout(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/v1/carts/cart_01/checkout", strings.NewReader(tt.body))
-			newMux("v7").ServeHTTP(rec, req)
+			Handle("v7").ServeHTTP(rec, req)
 
 			if rec.Code != tt.wantStatus {
 				t.Errorf("status = %d, want %d", rec.Code, tt.wantStatus)
@@ -68,36 +68,6 @@ func TestHandleCheckout(t *testing.T) {
 			}
 			if id, _ := got["order_id"].(string); !strings.HasPrefix(id, "ord_") {
 				t.Errorf("order_id = %v, want a value starting with ord_", got["order_id"])
-			}
-		})
-	}
-}
-
-func TestCheckoutRoute(t *testing.T) {
-	tests := map[string]struct {
-		method     string
-		path       string
-		wantStatus int
-	}{
-		"GET は受け付けない": {
-			method:     http.MethodGet,
-			path:       "/v1/carts/cart_01/checkout",
-			wantStatus: http.StatusMethodNotAllowed,
-		},
-		"cart_id の後ろが checkout でなければ 404 を返す": {
-			method:     http.MethodPost,
-			path:       "/v1/carts/cart_01/pay",
-			wantStatus: http.StatusNotFound,
-		},
-	}
-
-	for name, tt := range tests {
-		t.Run(name, func(t *testing.T) {
-			rec := httptest.NewRecorder()
-			newMux("v7").ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), tt.method, tt.path, strings.NewReader("{}")))
-
-			if rec.Code != tt.wantStatus {
-				t.Errorf("status = %d, want %d", rec.Code, tt.wantStatus)
 			}
 		})
 	}

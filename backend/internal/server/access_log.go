@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"log/slog"
@@ -6,10 +6,10 @@ import (
 	"time"
 )
 
-// withAccessLog は、リクエストごとに 1 行のアクセスログを出す
+// WithAccessLog は、リクエストごとに 1 行のアクセスログを出す
 //   - 返し終えたあとに出す。SIGTERM を受けたあとに処理を終えたリクエストも、ここで出る
 //   - /health (ALB のヘルスチェック) も出す。登録解除の間に、ヘルスチェックがいつ止まったかを見るため
-func withAccessLog(next http.Handler, version string) http.Handler {
+func WithAccessLog(next http.Handler, version string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}

@@ -1,4 +1,4 @@
-package main
+package checkout
 
 import (
 	"testing"
@@ -6,18 +6,18 @@ import (
 
 func TestTotalPrice(t *testing.T) {
 	tests := map[string]struct {
-		items []checkoutItem
+		items []item
 		want  int
 	}{
 		"単価 × 数量を足し合わせる": {
-			items: []checkoutItem{
+			items: []item{
 				{SKU: new("TSHIRT-BLK-M"), Quantity: new(2)},
 				{SKU: new("MUG-RED"), Quantity: new(1)},
 			},
 			want: 2980*2 + 1200,
 		},
 		"クライアントが送る unit_price は使わない": {
-			items: []checkoutItem{{SKU: new("TSHIRT-BLK-M"), Quantity: new(2), UnitPrice: new(1)}},
+			items: []item{{SKU: new("TSHIRT-BLK-M"), Quantity: new(2), UnitPrice: new(1)}},
 			want:  5960,
 		},
 	}

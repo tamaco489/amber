@@ -1,7 +1,7 @@
 // api は、ECS のデプロイ戦略を確かめるための検証用アプリ
-//   - /health: ALB のヘルスチェック用
-//   - /: バージョン番号を返す (どちらの版に振り分けられたかを確かめるため)
-//   - /v1/carts/{cart_id}/checkout: 注文を確定する (必須の項目を変えた版を出し、新旧のクライアントが混ざったときを確かめるため)
+//   - /health、/: どの版が動いているかを確かめる (internal/health)
+//   - /v1/carts/{cart_id}/checkout: 注文を確定する (internal/checkout)
+//   - ルーティングとアクセスログは internal/server。ここでは起動と終了だけを持つ
 package main
 
 import (
@@ -13,6 +13,10 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/tamaco489/amber/backend/internal/checkout"
+	"github.com/tamaco489/amber/backend/internal/health"
+	"github.com/tamaco489/amber/backend/internal/server"
 )
 
 // version は、ビルド時に -ldflags "-X main.version=..." で埋め込む
@@ -40,9 +44,14 @@ func run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer stop()
 
+	mux := server.NewMux(&server.Handlers{
+		Health:   health.Check,
+		Version:  health.Version(version),
+		Checkout: checkout.Handle(version),
+	})
 	srv := &http.Server{
 		Addr:              addr,
-		Handler:           withAccessLog(newMux(version), version),
+		Handler:           server.WithAccessLog(mux, version),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
