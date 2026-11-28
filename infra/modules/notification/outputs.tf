@@ -57,3 +57,8 @@ output "slack_bot_token_parameter_arn" {
   description = "ARN of the SSM parameter for the Slack bot token."
   value       = aws_ssm_parameter.slack_bot_token.arn
 }
+
+output "slack_user_ids_parameter_name" {
+  description = "Name of the SSM parameter for the map from GitHub usernames to Slack user IDs. Set the real map (JSON) to it with aws ssm put-parameter --overwrite."
+  value       = aws_ssm_parameter.slack_user_ids.name
+}

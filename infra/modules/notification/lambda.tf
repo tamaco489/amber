@@ -16,7 +16,7 @@ resource "aws_cloudwatch_log_group" "notifier" {
 
 # 通知の Lambda の実行ロール
 #   - 信頼条件: Lambda から。ロールを関数に付けられるのは、このアカウントで iam:PassRole を持つものだけ
-#   - 権限: 状態のテーブルの読み書き、ボットトークンの読み取り、ログの書き込み、失敗したときの DLQ への送信、ECS のサービスデプロイの一覧
+#   - 権限: 状態のテーブルの読み書き、ボットトークンと対応表 (Slack のユーザー ID) の読み取り、ログの書き込み、失敗したときの DLQ への送信、ECS のサービスデプロイの一覧
 resource "aws_iam_role" "notifier" {
   name               = "${local.name_prefix}-notification-lambda"
   assume_role_policy = data.aws_iam_policy_document.notifier_trust.json
@@ -39,7 +39,7 @@ resource "aws_iam_role_policy" "notifier" {
   policy = data.aws_iam_policy_document.notifier.json
 }
 
-# ボットトークンは AWS マネージドキー (aws/ssm) で暗号化している。このキーのキーポリシーが、
+# ボットトークンと対応表は AWS マネージドキー (aws/ssm) で暗号化している。このキーのキーポリシーが、
 # アカウント内のプリンシパルに Parameter Store 経由の復号を許しているため、kms:Decrypt は付けない
 # DOC: https://docs.aws.amazon.com/systems-manager/latest/userguide/ps-restrict-decryption.html
 data "aws_iam_policy_document" "notifier" {
@@ -54,9 +54,12 @@ data "aws_iam_policy_document" "notifier" {
   }
 
   statement {
-    sid       = "ReadSlackBotToken"
-    actions   = ["ssm:GetParameter"]
-    resources = [aws_ssm_parameter.slack_bot_token.arn]
+    sid     = "ReadSlackParameters"
+    actions = ["ssm:GetParameter"]
+    resources = [
+      aws_ssm_parameter.slack_bot_token.arn,
+      aws_ssm_parameter.slack_user_ids.arn,
+    ]
   }
 
   # このロググループの中のログストリームだけ (Lambda のコンソールが作るロールと同じ形)
@@ -129,10 +132,11 @@ resource "aws_lambda_function" "notifier" {
 
   environment {
     variables = {
-      TABLE_NAME            = aws_dynamodb_table.notifier_state.name
-      SLACK_TOKEN_PARAMETER = aws_ssm_parameter.slack_bot_token.name
-      SLACK_CHANNEL_ID      = var.slack_channel_id
-      SERVICE_NAME          = local.ecs_service_name
+      TABLE_NAME               = aws_dynamodb_table.notifier_state.name
+      SLACK_TOKEN_PARAMETER    = aws_ssm_parameter.slack_bot_token.name
+      SLACK_USER_IDS_PARAMETER = aws_ssm_parameter.slack_user_ids.name
+      SLACK_CHANNEL_ID         = var.slack_channel_id
+      SERVICE_NAME             = local.ecs_service_name
     }
   }
 
