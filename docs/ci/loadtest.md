@@ -31,7 +31,7 @@ The application is included so that a change to it (such as the shape of the res
 
 ## Keeping versions in one place
 
-- The k6 version is set only by `k6_image` in `loadtest/justfile`. The workflow only calls the just recipes and does not name a k6 version
+- The k6 version is set only by the `FROM` line of `loadtest/Dockerfile`, which `k6_image` in `loadtest/justfile` reads. The workflow only calls the just recipes and does not name a k6 version. The image is pinned by tag and digest and updated by Dependabot ([Pinning actions and images](./pinning.md))
 - The just version is pinned in the `env` of `ci-loadtest.yaml` (`JUST_VERSION`, 1.46.0)
 
 ## Running locally

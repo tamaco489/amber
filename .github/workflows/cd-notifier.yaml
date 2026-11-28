@@ -49,9 +49,9 @@ jobs:
       # OIDC のトークンを発行して、notifier 用のロールを引き受けるため
       id-token: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-go@v7
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.mod
@@ -61,7 +61,7 @@ jobs:
         run: .github/workflows/scripts/cd-notifier/build.sh
 
       # ロールの ARN はリポジトリの Variables (AWS_NOTIFIER_DEPLOY_ROLE_ARN) に置く
-      - uses: aws-actions/configure-aws-credentials@v6
+      - uses: aws-actions/configure-aws-credentials@45666896f5d8e0f10ae255413f3a4cdd03bdc8f5 # v6.3.1
         with:
           role-to-assume: ${{ vars.AWS_NOTIFIER_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}

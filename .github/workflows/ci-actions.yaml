@@ -36,7 +36,7 @@ jobs:
   actions-lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # バージョンを固定した actionlint と shellcheck を入れ、PATH の先頭に置く
       - name: Install actionlint and shellcheck

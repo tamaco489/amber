@@ -33,14 +33,14 @@ jobs:
   infra-fmt:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # setup-terraform はバージョンをファイルから読めないため、.tool-versions から取り出す
       - name: Read Terraform version
         id: versions
         working-directory: .
         run: echo "terraform=$(awk '$1 == "terraform" {print $2}' .tool-versions)" >> "$GITHUB_OUTPUT"
 
-      - uses: hashicorp/setup-terraform@v4
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
           terraform_version: ${{ steps.versions.outputs.terraform }}
           terraform_wrapper: false
@@ -56,9 +56,9 @@ jobs:
   infra-lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: terraform-linters/setup-tflint@v6
+      - uses: terraform-linters/setup-tflint@6ffdbaa3be476b3431f7275c26966ef32ff60337 # v6.3.2
         with:
           tflint_version_file: .tool-versions
       # プラグインの取得で GitHub API の回数制限に当たらないよう、トークンを渡す
@@ -78,7 +78,7 @@ jobs:
   infra-scan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # setup-trivy はバージョンをファイルから読めないため、.tool-versions から取り出す
       - name: Read Trivy version
         id: versions
@@ -86,7 +86,7 @@ jobs:
         run: echo "trivy=v$(awk '$1 == "trivy" {print $2}' .tool-versions)" >> "$GITHUB_OUTPUT"
 
       # メジャータグがないため、パッチバージョンまで固定する
-      - uses: aquasecurity/setup-trivy@v0.3.1
+      - uses: aquasecurity/setup-trivy@81e514348e19b6112ce2a7e3ecbafe19c1e1f567 # v0.3.1
         with:
           version: ${{ steps.versions.outputs.trivy }}
       - name: Scan
@@ -107,19 +107,19 @@ jobs:
       # plan の結果を PR にコメントするため
       pull-requests: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Read Terraform version
         id: versions
         working-directory: .
         run: echo "terraform=$(awk '$1 == "terraform" {print $2}' .tool-versions)" >> "$GITHUB_OUTPUT"
 
-      - uses: hashicorp/setup-terraform@v4
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
           terraform_version: ${{ steps.versions.outputs.terraform }}
           terraform_wrapper: false
 
       # ロールの ARN はリポジトリの Variables (AWS_PLAN_ROLE_ARN) に置く
-      - uses: aws-actions/configure-aws-credentials@v6
+      - uses: aws-actions/configure-aws-credentials@45666896f5d8e0f10ae255413f3a4cdd03bdc8f5 # v6.3.1
         with:
           role-to-assume: ${{ vars.AWS_PLAN_ROLE_ARN }}
           aws-region: ap-northeast-1
@@ -138,7 +138,7 @@ jobs:
           echo "exitcode=$?" >> "$GITHUB_OUTPUT"
       # 同じ PR へのコメントは 1 つにまとめ、push のたびに書き換える
       - name: Comment plan on PR
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           PLAN_FILE: ${{ runner.temp }}/plan.txt
           PLAN_EXITCODE: ${{ steps.plan.outputs.exitcode }}

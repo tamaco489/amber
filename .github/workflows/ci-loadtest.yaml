@@ -25,7 +25,7 @@ concurrency:
   group: ci-loadtest-${{ github.ref }}
   cancel-in-progress: true
 
-# k6 の版は loadtest/justfile の k6_image だけで決める。ここでは just のレシピを呼び、版を書かない
+# k6 の版は loadtest/Dockerfile の FROM の行 (loadtest/justfile の k6_image が読む) だけで決める。ここでは just のレシピを呼び、版を書かない
 # just は手元で動作を確かめたバージョンに合わせる
 env:
   JUST_VERSION: 1.46.0
@@ -39,9 +39,9 @@ jobs:
   loadtest-inspect:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: extractions/setup-just@v4
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
         with:
           just-version: ${{ env.JUST_VERSION }}
 
@@ -59,9 +59,9 @@ jobs:
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: extractions/setup-just@v4
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
         with:
           just-version: ${{ env.JUST_VERSION }}
 

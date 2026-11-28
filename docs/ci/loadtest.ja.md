@@ -31,7 +31,7 @@ PR で、次を変えたときに動きます。
 
 ## 版のそろえ方
 
-- k6 の版は `loadtest/justfile` の `k6_image` だけで決めます。ワークフローは just のレシピを呼ぶだけで、k6 の版を書きません
+- k6 の版は `loadtest/Dockerfile` の `FROM` の行 (`loadtest/justfile` の `k6_image` が読む) だけで決めます。ワークフローは just のレシピを呼ぶだけで、k6 の版を書きません。イメージはタグとダイジェストで固定し、Dependabot で上げます ([action とイメージの固定](./pinning.ja.md))
 - just の版は `ci-loadtest.yaml` の `env` (`JUST_VERSION`) で固定しています (1.46.0)
 
 ## 手元での流し方

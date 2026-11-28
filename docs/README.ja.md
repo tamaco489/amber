@@ -36,7 +36,7 @@ ECS は、CodeDeploy を使わずにブルー/グリーン (2025 年 7 月)、�
 ## 利用ツール
 
 手元で使うツールです。Go、golangci-lint、Terraform、tflint、trivy のバージョンは `.tool-versions` (asdf) で固定し、手元と CI の両方がここを読みます。
-actionlint と shellcheck は `ci-actions.yaml` で、k6 は `loadtest/justfile` のコンテナのイメージで、CI の just は `ci-loadtest.yaml` で固定しています。それ以外は固定しておらず、動作を確かめたバージョンを書いています。
+actionlint と shellcheck は `ci-actions.yaml` で、k6 は `loadtest/Dockerfile` (`loadtest/justfile` が読む) のコンテナのイメージで、CI の just は `ci-loadtest.yaml` で固定しています。それ以外は固定しておらず、動作を確かめたバージョンを書いています。
 
 | ツール        | バージョン | 用途                                                                                                     |
 | ------------- | ---------- | -------------------------------------------------------------------------------------------------------- |
@@ -47,7 +47,7 @@ actionlint と shellcheck は `ci-actions.yaml` で、k6 は `loadtest/justfile`
 | tflint        | 0.66.0     | Terraform の lint (AWS のルールセットを含む)                                                             |
 | trivy         | 0.76.2     | Terraform の設定の脆弱性の検査                                                                           |
 | AWS CLI       | 2.40.0     | 状態の確認、プレフィックスリストの更新、ECR へのログイン                                                 |
-| k6            | 2.4.0      | デプロイ中の負荷試験 (`loadtest/justfile` で固定)                                                        |
+| k6            | 2.4.0      | デプロイ中の負荷試験 (`loadtest/Dockerfile` で固定)                                                      |
 | just          | 1.46.0     | 作業のレシピ (`just backend::push`、`just infra::plan` など)                                             |
 | actionlint    | 1.7.12     | GitHub Actions のワークフローの検査 (`ci-actions.yaml` で固定)                                           |
 | shellcheck    | 0.11.0     | シェルスクリプトの検査 (`ci-actions.yaml` で固定)                                                        |
@@ -55,14 +55,15 @@ actionlint と shellcheck は `ci-actions.yaml` で、k6 は `loadtest/justfile`
 
 ## ドキュメント
 
-| ドキュメント                                                | 内容                                                                                                                    |
-| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| [検証環境の停止と再開](./infra/runtime.ja.md)               | `enable_runtime` による時間課金リソースの作成と削除、常に残るリソース                                                   |
-| [tfstate のバケットのライフサイクル](./infra/tfstate.ja.md) | tfstate のバケットの古い版を 10 個まで残すライフサイクルと、入れる・確かめる手順                                        |
-| [デプロイの Slack への通知](./infra/notification.ja.md)     | デプロイの開始・進行中・完了・失敗を Slack に送る仕組み、起動した人へのメンションと、ボットトークン・対応表を入れる手順 |
-| [タスク定義の変更の反映](./cd/task-definition.ja.md)        | Terraform で変えたタスク定義を、`cd-backend` でサービスに届ける手順                                                     |
-| [通知の Lambda のデプロイ](./cd/notifier.ja.md)             | 通知の Lambda のコードを、`main` への push で `cd-notifier` が置く仕組みと、流し直す手順                                |
-| [ワークフローとスクリプトの検査](./ci/workflow-lint.ja.md)  | `ci-actions` が actionlint と shellcheck で検査する内容と、手元での流し方                                               |
-| [k6 のスクリプトの検査](./ci/loadtest.ja.md)                | `ci-loadtest` が `k6 inspect` と、runner の中のアプリへの短い負荷試験で検査する内容と、手元での流し方                   |
-| [デプロイ中の負荷試験 (k6)](./loadtest/k6.ja.md)            | デプロイ中に k6 で負荷をかけ、失敗の種類とバージョンごとの件数を数える手順                                              |
-| [v\* のタグのルールセット](./github/tag-ruleset.ja.md)      | デプロイの起点の `v*` のタグを、作成・更新・削除できる人を管理者に絞る                                                  |
+| ドキュメント                                                | 内容                                                                                                                                         |
+| ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| [検証環境の停止と再開](./infra/runtime.ja.md)               | `enable_runtime` による時間課金リソースの作成と削除、常に残るリソース                                                                        |
+| [tfstate のバケットのライフサイクル](./infra/tfstate.ja.md) | tfstate のバケットの古い版を 10 個まで残すライフサイクルと、入れる・確かめる手順                                                             |
+| [デプロイの Slack への通知](./infra/notification.ja.md)     | デプロイの開始・進行中・完了・失敗を Slack に送る仕組み、起動した人へのメンションと、ボットトークン・対応表を入れる手順                      |
+| [タスク定義の変更の反映](./cd/task-definition.ja.md)        | Terraform で変えたタスク定義を、`cd-backend` でサービスに届ける手順                                                                          |
+| [通知の Lambda のデプロイ](./cd/notifier.ja.md)             | 通知の Lambda のコードを、`main` への push で `cd-notifier` が置く仕組みと、流し直す手順                                                     |
+| [ワークフローとスクリプトの検査](./ci/workflow-lint.ja.md)  | `ci-actions` が actionlint と shellcheck で検査する内容と、手元での流し方                                                                    |
+| [action とイメージの固定](./ci/pinning.ja.md)               | ワークフローの action とコンテナのイメージを commit の SHA とダイジェストで固定する理由、書き方、Dependabot の PR での更新、固定できないもの |
+| [k6 のスクリプトの検査](./ci/loadtest.ja.md)                | `ci-loadtest` が `k6 inspect` と、runner の中のアプリへの短い負荷試験で検査する内容と、手元での流し方                                        |
+| [デプロイ中の負荷試験 (k6)](./loadtest/k6.ja.md)            | デプロイ中に k6 で負荷をかけ、失敗の種類とバージョンごとの件数を数える手順                                                                   |
+| [v\* のタグのルールセット](./github/tag-ruleset.ja.md)      | デプロイの起点の `v*` のタグを、作成・更新・削除できる人を管理者に絞る                                                                       |
