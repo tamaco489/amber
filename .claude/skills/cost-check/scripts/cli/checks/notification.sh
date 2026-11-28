@@ -41,7 +41,7 @@ section "Lambda: prd-amber を含む関数 (通知の関数 1 つだけ。provid
 query '[.Functions[] | select(.FunctionName | contains("prd-amber")) | {name: .FunctionName, runtime: .Runtime, architectures: .Architectures}] | sort_by(.name)' \
     aws lambda list-functions
 
-section "SSM: /prd-amber/ のパラメータ (ボットトークン 1 つだけ。標準)"
+section "SSM: /prd-amber/ のパラメータ (ボットトークンと、Slack のユーザー ID の対応表の 2 つだけ。どちらも標準)"
 query '[.Parameters[] | {name: .Name, type: .Type, tier: .Tier}] | sort_by(.name)' \
     aws ssm describe-parameters --parameter-filters Key=Name,Option=BeginsWith,Values=/prd-amber/
 
